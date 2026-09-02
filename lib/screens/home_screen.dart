@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 
 import '../core/constants.dart';
+import '../services/stt_service.dart';
 import '../widgets/feature_button.dart';
 import '../widgets/workspace_panel.dart';
 import 'llm_screen.dart';
+import 'stt_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  const HomeScreen({this.sttService, super.key});
+
+  final STTService? sttService;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -26,6 +30,15 @@ class _HomeScreenState extends State<HomeScreen> {
       context,
       MaterialPageRoute<void>(
         builder: (context) => const LlmScreen(),
+      ),
+    );
+  }
+
+  void _openSttScreen() {
+    Navigator.push(
+      context,
+      MaterialPageRoute<void>(
+        builder: (context) => SttScreen(sttService: widget.sttService),
       ),
     );
   }
@@ -61,7 +74,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         FeatureButton(
                           label: 'STT',
                           icon: Icons.mic_rounded,
-                          onPressed: () => _selectModule('STT'),
+                          onPressed: _openSttScreen,
                         ),
                         FeatureButton(
                           label: 'LLM',

@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 
 import 'core/constants.dart';
 import 'screens/home_screen.dart';
+import 'services/stt_service.dart';
 
 class NalamApp extends StatelessWidget {
-  const NalamApp({super.key});
+  const NalamApp({this.sttService, super.key});
+
+  final STTService? sttService;
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +28,7 @@ class NalamApp extends StatelessWidget {
           margin: EdgeInsets.zero,
         ),
       ),
-      home: const HomeScreen(),
+      home: HomeScreen(sttService: sttService),
     );
   }
 }

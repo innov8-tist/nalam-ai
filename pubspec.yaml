@@ -34,6 +34,8 @@ dependencies:
   path_provider: ^2.1.5
   http: ^1.2.2
   llamadart: ^0.8.21
+  whisper_flutter_new: ^1.0.1
+  record: ^7.1.1
 
 dependency_overrides:
   path_provider_android: 2.2.17
