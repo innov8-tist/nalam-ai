@@ -2,11 +2,32 @@ abstract final class AppConstants {
   static const String appName = 'NalamEdge';
   static const String workspaceTitle = 'Medical Triage Workspace';
 
-  /// Override for deployed builds with
-  /// `--dart-define=NALAM_API_BASE_URL=https://your-server.example`.
-  static const String remoteApiBaseUrl = String.fromEnvironment(
-    'NALAM_API_BASE_URL',
+  /// The one configurable address for all services running on the host.
+  ///
+  /// Override it with:
+  /// `--dart-define=NALAM_SERVER_URL=http://192.168.1.25:8000`
+  static const String serverUrl = String.fromEnvironment(
+    'NALAM_SERVER_URL',
+    defaultValue: 'http://10.0.2.2:8000',
   );
+
+  static Uri get serverUri => Uri.parse(serverUrl);
+
+  static Uri serverEndpoint(String path) => serverUri.replace(
+    path: path.startsWith('/') ? path : '/$path',
+    query: null,
+    fragment: null,
+  );
+
+  /// The optional llama.cpp server runs beside the API on port 8080.
+  static String get smolVlmApiUrl => serverUri
+      .replace(
+        port: 8080,
+        path: '/v1/chat/completions',
+        query: null,
+        fragment: null,
+      )
+      .toString();
 
   // Piper TTS Models
   static const String piperModelsDir = 'models/piper';
@@ -22,7 +43,6 @@ abstract final class AppConstants {
       'https://huggingface.co/rhasspy/piper-voices/resolve/main/ml/ml_IN/google/high/ml_IN-google-high.onnx';
   static const String piperMalayalamModelJsonUrl =
       'https://huggingface.co/rhasspy/piper-voices/resolve/main/ml/ml_IN/google/high/ml_IN-google-high.onnx.json';
-
 
   // SmolVLM2 On-Device Model Defaults
   static const String smolVlmModelDir = 'models/smolvlm2';
@@ -40,16 +60,6 @@ abstract final class AppConstants {
       'https://huggingface.co/ggml-org/SmolVLM2-500M-Video-Instruct-GGUF/resolve/main/mmproj-SmolVLM2-500M-Video-Instruct-Q8_0.gguf';
   static const String smolVlmMmprojMirrorDownloadUrl =
       'https://hf-mirror.com/ggml-org/SmolVLM2-500M-Video-Instruct-GGUF/resolve/main/mmproj-SmolVLM2-500M-Video-Instruct-Q8_0.gguf';
-
-  // SmolVLM2 Model Server / API Endpoint
-  static const String smolVlmDefaultApiUrl =
-      'http://127.0.0.1:8080/v1/chat/completions';
-  static const String smolVlmAndroidEmulatorApiUrl =
-      'http://10.0.2.2:8080/v1/chat/completions';
-
-  // STT Model Server / API Endpoint
-  static const String sttDefaultApiUrl = 'http://127.0.0.1:8080/v1/audio/transcriptions';
-  static const String sttAndroidEmulatorApiUrl = 'http://10.0.2.2:8080/v1/audio/transcriptions';
 
   // ChatML & SmolVLM2 template tokens
   static const String imStartToken = '<|im_start|>';

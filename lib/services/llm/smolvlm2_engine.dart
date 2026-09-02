@@ -110,8 +110,7 @@ class SmolVlm2Engine implements BaseLlmEngine {
 
   /// Resolves the appropriate model API endpoint.
   Uri _resolveApiUri(String? explicitUrl) {
-    final rawUrl =
-        explicitUrl ?? defaultApiUrl ?? AppConstants.smolVlmDefaultApiUrl;
+    final rawUrl = explicitUrl ?? defaultApiUrl ?? AppConstants.smolVlmApiUrl;
     return Uri.parse(rawUrl.trim());
   }
 

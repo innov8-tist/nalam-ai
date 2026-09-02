@@ -24,9 +24,10 @@ class ConnectionStatusBar extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'For a physical phone, enter the laptop’s Wi-Fi address. '
-                'Example: http://192.168.1.25:8000',
+              Text(
+                'This is the single server address used by health checks, '
+                'assessment, and voice transcription. Build default: '
+                '${AppConstants.serverUrl}',
               ),
               const SizedBox(height: 14),
               TextField(

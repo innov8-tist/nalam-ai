@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../models/llm_state.dart';
+import '../models/stt_state.dart';
+import '../services/stt_service.dart';
 import '../state/app_controller.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_components.dart';
@@ -19,12 +23,91 @@ class _AssessmentScreenState extends State<AssessmentScreen>
   int tab = 0;
   String? imagePath;
   final symptoms = TextEditingController();
+  STTService? _sttService;
+  StreamSubscription<SttEngineState>? _sttSubscription;
+  Timer? _recordingTimer;
+  SttEngineState _sttState = const SttEngineState(
+    status: SttEngineStatus.ready,
+    message: 'Tap the microphone to start speaking.',
+  );
   @override
   bool get wantKeepAlive => true;
   @override
   void dispose() {
+    _recordingTimer?.cancel();
+    _sttSubscription?.cancel();
+    final service = _sttService;
+    if (service != null) unawaited(service.dispose());
     symptoms.dispose();
     super.dispose();
+  }
+
+  STTService _getSttService(AppController app) {
+    final existing = _sttService;
+    if (existing != null) return existing;
+    final service = STTService(app.remoteAiService);
+    _sttSubscription = service.stateStream.listen((state) {
+      if (mounted) setState(() => _sttState = state);
+    });
+    _sttService = service;
+    return service;
+  }
+
+  Future<void> _toggleVoiceInput() async {
+    final app = AppScope.of(context);
+    final existingService = _sttService;
+
+    if (existingService == null || !existingService.currentState.isRecording) {
+      final online = app.isOnline || await app.refreshConnectivity();
+      if (!mounted) return;
+      if (!online) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Voice transcription needs a connection to the Nalam server.',
+            ),
+          ),
+        );
+        return;
+      }
+    }
+    final service = _getSttService(app);
+
+    try {
+      if (service.currentState.isRecording) {
+        await _finishVoiceInput(service, app.languageCode);
+      } else {
+        await service.startRecording();
+        _recordingTimer?.cancel();
+        // Sarvam's synchronous endpoint is intended for clips under 30 seconds.
+        _recordingTimer = Timer(const Duration(seconds: 29), () {
+          if (mounted && service.currentState.isRecording) {
+            unawaited(_toggleVoiceInput());
+          }
+        });
+      }
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(error.toString())));
+    }
+  }
+
+  Future<void> _finishVoiceInput(STTService service, String language) async {
+    _recordingTimer?.cancel();
+    final languageCode = language == 'ml' ? 'ml-IN' : 'en-IN';
+    final transcript = await service.stopAndTranscribe(
+      languageCode: languageCode,
+    );
+    if (!mounted) return;
+    setState(() {
+      symptoms.text = transcript;
+      symptoms.selection = TextSelection.collapsed(offset: transcript.length);
+      tab = 1;
+    });
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Speech converted to text.')));
   }
 
   Future<void> _analyze() async {
@@ -95,7 +178,13 @@ class _AssessmentScreenState extends State<AssessmentScreen>
               ),
               const SizedBox(height: 18),
               if (tab == 0)
-                _VoicePanel(onUseText: () => setState(() => tab = 1))
+                _VoicePanel(
+                  state: _sttState,
+                  onMicrophonePressed: _sttState.isTranscribing
+                      ? null
+                      : _toggleVoiceInput,
+                  onUseText: () => setState(() => tab = 1),
+                )
               else ...[
                 if (tab == 2) ...[
                   ImageInputPreview(
@@ -157,31 +246,62 @@ class _AssessmentScreenState extends State<AssessmentScreen>
 }
 
 class _VoicePanel extends StatelessWidget {
-  const _VoicePanel({required this.onUseText});
+  const _VoicePanel({
+    required this.state,
+    required this.onMicrophonePressed,
+    required this.onUseText,
+  });
+  final SttEngineState state;
+  final VoidCallback? onMicrophonePressed;
   final VoidCallback onUseText;
   @override
   Widget build(BuildContext context) => SectionCard(
     child: Column(
       children: [
-        Container(
-          width: 112,
-          height: 112,
-          decoration: const BoxDecoration(
-            color: AppColors.mint,
-            shape: BoxShape.circle,
+        Material(
+          color: state.isRecording
+              ? Theme.of(context).colorScheme.errorContainer
+              : AppColors.mint,
+          shape: const CircleBorder(),
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: onMicrophonePressed,
+            child: SizedBox(
+              width: 112,
+              height: 112,
+              child: state.isTranscribing
+                  ? const Padding(
+                      padding: EdgeInsets.all(38),
+                      child: CircularProgressIndicator(strokeWidth: 3),
+                    )
+                  : Icon(
+                      state.isRecording ? Icons.stop_rounded : Icons.mic,
+                      size: 56,
+                      color: state.isRecording
+                          ? Theme.of(context).colorScheme.error
+                          : AppColors.primary,
+                    ),
+            ),
           ),
-          child: const Icon(Icons.mic, size: 56, color: AppColors.primary),
         ),
         const SizedBox(height: 18),
-        const Text(
-          'Voice input is not connected yet',
-          style: TextStyle(fontWeight: FontWeight.w700),
+        Text(
+          state.isRecording
+              ? 'Recording'
+              : state.isTranscribing
+              ? 'Transcribing with Sarvam'
+              : 'Describe your symptoms',
+          style: const TextStyle(fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 6),
-        const Text(
-          'The existing speech-to-text service is a placeholder. Use text input for this build.',
+        Text(
+          state.message,
           textAlign: TextAlign.center,
-          style: TextStyle(color: AppColors.muted),
+          style: TextStyle(
+            color: state.hasError
+                ? Theme.of(context).colorScheme.error
+                : AppColors.muted,
+          ),
         ),
         const SizedBox(height: 14),
         OutlinedButton.icon(

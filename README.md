@@ -19,13 +19,25 @@ Start the API from `logic/` with its environment variables configured:
 uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
-The Android emulator connects to `http://10.0.2.2:8000` by default. Desktop
-builds use `http://127.0.0.1:8000`. For a physical device or deployed server,
-set the address at build/run time:
+Set `SARVAM_API` (or `SARVAM_API_KEY`) in `logic/.env` to enable the voice
+button. The app records a mono 16 kHz WAV clip, uploads it to `/transcribe`,
+and places Sarvam's transcript in the symptoms text field.
+
+All frontend services use `NALAM_SERVER_URL` from `config.json`. It defaults to
+the Android emulator host (`http://10.0.2.2:8000`). Change that one value for
+desktop, a physical device, or a deployed server, then run:
 
 ```sh
-flutter run --dart-define=NALAM_API_BASE_URL=https://api.example.com
+flutter run --dart-define-from-file=config.json
 ```
+
+For CI or a one-off override, you can still use
+`--dart-define=NALAM_SERVER_URL=http://192.168.1.25:8000` instead.
+
+You can also tap the online/offline status bar and change the address once at
+runtime; that selection is saved on the device. The connection tester, medical
+assessment, and Sarvam transcription all use the selected address. The optional
+SmolVLM server URL is derived from the same host using port `8080`.
 
 The app checks `/health` every 20 seconds. A successful health check displays
 the online indicator and routes text/image assessment requests to `/chat`.

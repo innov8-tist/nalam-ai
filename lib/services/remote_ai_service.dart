@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
@@ -31,10 +30,7 @@ class RemoteAiService {
   }
 
   static Uri get _defaultBaseUri {
-    final configured = AppConstants.remoteApiBaseUrl.trim();
-    if (configured.isNotEmpty) return Uri.parse(configured);
-    // Use laptop server IP for both Android device and emulator
-    return Uri.parse('http://172.20.10.9:8000');
+    return AppConstants.serverUri;
   }
 
   Uri _endpoint(String path) {
@@ -95,6 +91,47 @@ class RemoteAiService {
       throw const RemoteAiException('Server returned an empty response.');
     }
     return result.trim();
+  }
+
+  Future<String> transcribeAudio(
+    String audioPath, {
+    String languageCode = 'unknown',
+    Duration timeout = const Duration(seconds: 45),
+  }) async {
+    final request = http.MultipartRequest('POST', _endpoint('transcribe'))
+      ..fields['language_code'] = languageCode
+      ..files.add(
+        await http.MultipartFile.fromPath(
+          'audio',
+          audioPath,
+          contentType: MediaType('audio', 'wav'),
+        ),
+      );
+
+    final streamed = await _client.send(request).timeout(timeout);
+    final response = await http.Response.fromStream(streamed);
+    Map<String, dynamic>? payload;
+    try {
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map) payload = Map<String, dynamic>.from(decoded);
+    } catch (_) {}
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      final detail = payload?['detail']?.toString();
+      throw RemoteAiException(
+        detail?.isNotEmpty == true
+            ? detail!
+            : 'Transcription server returned HTTP ${response.statusCode}.',
+      );
+    }
+
+    final transcript = payload?['transcript'];
+    if (transcript is! String || transcript.trim().isEmpty) {
+      throw const RemoteAiException(
+        'No speech was recognized. Please try again and speak clearly.',
+      );
+    }
+    return transcript.trim();
   }
 
   MediaType _imageContentType(String path) {

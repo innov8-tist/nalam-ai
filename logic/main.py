@@ -10,6 +10,7 @@ from typing import Optional
 import uvicorn
 import json
 import re
+from starlette.concurrency import run_in_threadpool
 from struct_llm import MedicalTriageResponse
 
 load_dotenv()
@@ -17,7 +18,7 @@ load_dotenv()
 app = FastAPI(title="Nalam AI Multimodal API")
 
 GEMINI_KEY = os.getenv("GEMINI_API_KEY")
-SARVAM_API_KEY = os.getenv("SARVAM_API")
+SARVAM_API_KEY = os.getenv("SARVAM_API") or os.getenv("SARVAM_API_KEY")
 
 # Initialize Gemini model
 model = ChatGoogleGenerativeAI(
@@ -67,24 +68,71 @@ Guidelines:
 Important: Your response must include ONLY the JSON object, nothing else."""
 
 
-def convert_audio_to_text(audio_bytes: bytes) -> str:
+def convert_audio_to_text(
+    audio_bytes: bytes,
+    filename: str = "audio.wav",
+    content_type: str = "audio/wav",
+    language_code: str = "unknown",
+) -> str:
     """Convert audio to text using Sarvam API"""
+    if not SARVAM_API_KEY:
+        raise HTTPException(
+            status_code=503,
+            detail="Sarvam API key is not configured on the server.",
+        )
+    if not audio_bytes:
+        raise HTTPException(status_code=400, detail="The uploaded audio file is empty.")
+
     url = "https://api.sarvam.ai/speech-to-text"
-    
     files = {
-        'file': ('audio.wav', audio_bytes, 'audio/wav')
+        "file": (filename, audio_bytes, content_type)
     }
     headers = {
-        'API-Subscription-Key': SARVAM_API_KEY
+        "api-subscription-key": SARVAM_API_KEY
     }
-    
+    data = {
+        "model": "saaras:v3",
+        "mode": "transcribe",
+        "language_code": language_code,
+    }
+
     try:
-        response = requests.post(url, files=files, headers=headers)
+        response = requests.post(
+            url,
+            files=files,
+            data=data,
+            headers=headers,
+            timeout=45,
+        )
         response.raise_for_status()
         result = response.json()
-        return result.get('transcript', '')
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Audio conversion failed: {str(e)}")
+        raw_transcript = result.get("transcript", "")
+        transcript = raw_transcript.strip() if isinstance(raw_transcript, str) else ""
+        if not transcript:
+            raise HTTPException(
+                status_code=422,
+                detail="Sarvam could not recognize speech in the recording.",
+            )
+        return transcript
+    except HTTPException:
+        raise
+    except requests.RequestException as error:
+        detail = ""
+        if error.response is not None:
+            try:
+                detail = error.response.json().get("error", {}).get("message", "")
+            except (ValueError, AttributeError):
+                detail = error.response.text[:300]
+        message = detail or str(error)
+        raise HTTPException(
+            status_code=502,
+            detail=f"Sarvam transcription failed: {message}",
+        ) from error
+    except ValueError as error:
+        raise HTTPException(
+            status_code=502,
+            detail="Sarvam returned an invalid transcription response.",
+        ) from error
 
 
 def encode_image(image_bytes: bytes) -> str:
@@ -132,7 +180,12 @@ async def chat_with_ai(
         
         if audio:
             audio_bytes = await audio.read()
-            user_message = convert_audio_to_text(audio_bytes)
+            user_message = await run_in_threadpool(
+                convert_audio_to_text,
+                audio_bytes,
+                audio.filename or "audio.wav",
+                audio.content_type or "audio/wav",
+            )
         
         if not user_message:
             raise HTTPException(status_code=400, detail="Either text_prompt or audio must be provided")
@@ -184,12 +237,34 @@ async def chat_with_ai(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.post("/transcribe")
+async def transcribe_audio(
+    audio: UploadFile = File(...),
+    language_code: str = Form("unknown"),
+):
+    """Transcribe a short recording with Sarvam without running triage."""
+    audio_bytes = await audio.read()
+    transcript = await run_in_threadpool(
+        convert_audio_to_text,
+        audio_bytes,
+        audio.filename or "audio.wav",
+        audio.content_type or "audio/wav",
+        language_code,
+    )
+    return {
+        "success": True,
+        "transcript": transcript,
+        "language_code": language_code,
+    }
+
+
 @app.get("/")
 async def root():
     return {
         "message": "Nalam AI Multimodal API",
         "endpoints": {
             "/chat": "POST - Send text/audio prompts with optional images",
+            "/transcribe": "POST - Convert an audio recording to text with Sarvam",
             "/health": "GET - Check API health"
         }
     }
