@@ -34,6 +34,8 @@ dependencies:
   path_provider: ^2.1.5
   http: ^1.2.2
   llamadart: ^0.8.21
+  flutter_tts: ^4.2.5
+  dio: ^5.4.0
 
 dependency_overrides:
   path_provider_android: 2.2.17
