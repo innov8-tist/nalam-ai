@@ -169,9 +169,7 @@ class STTService {
   }
 
   Future<void> _ensureModelLinked(Directory dir) async {
-    final expectedPath = '${dir.path}/ggml-small.bin';
     final actualPath = '${dir.path}/${AppConstants.whisperModelFileName}';
-    final expectedFile = File(expectedPath);
     final actualFile = File(actualPath);
 
     if (actualFile.existsSync()) {
@@ -179,11 +177,13 @@ class STTService {
       final arch = await getGgufArchitecture(actualPath);
       if (arch != null && arch != 'non-gguf' && arch != 'whisper') {
         throw Exception(
-          'Incompatible model architecture: "$arch". On-device STT requires a "whisper" model. '
-          'NVIDIA Parakeet models cannot be loaded in-process by whisper.cpp as it results in a native crash (SIGSEGV).',
+          'Incompatible model architecture: "$arch". On-device STT requires a "whisper" model.',
         );
       }
 
+      // For legacy GGML .bin files, link to expected name
+      final expectedPath = '${dir.path}/ggml-tiny.bin';
+      final expectedFile = File(expectedPath);
       if (!expectedFile.existsSync() || expectedFile.lengthSync() != actualFile.lengthSync()) {
         if (expectedFile.existsSync()) {
           try {
@@ -220,7 +220,7 @@ class STTService {
               status: SttEngineStatus.error,
               message: 'STT model weights not found on device',
               error:
-                  'Parakeet TDT 0.6B v3 model not found in storage. Tap "Download Model" to download the model once for offline edge transcription.',
+          'Whisper Tiny model not found in storage. Tap "Download Model" to download the model once for offline edge transcription.',
             ),
           );
           return;
@@ -230,14 +230,14 @@ class STTService {
       final dir = await getModelDirectory();
       await _ensureModelLinked(dir);
       _whisper = Whisper(
-        model: WhisperModel.small,
+        model: WhisperModel.tiny,
         modelDir: dir.path,
       );
 
       _updateState(
         _currentState.copyWith(
           status: SttEngineStatus.ready,
-          message: 'Parakeet TDT STT Ready (On-Device)',
+          message: 'Whisper Tiny STT Ready (On-Device)',
         ),
       );
     } catch (e) {
@@ -327,14 +327,14 @@ class STTService {
 
       await _ensureModelLinked(dir);
       _whisper = Whisper(
-        model: WhisperModel.small,
+        model: WhisperModel.tiny,
         modelDir: dir.path,
       );
 
       _updateState(
         _currentState.copyWith(
           status: SttEngineStatus.ready,
-          message: 'Parakeet TDT STT Ready (On-Device)',
+          message: 'Whisper Tiny STT Ready (On-Device)',
           downloadProgress: 1.0,
         ),
       );
@@ -589,7 +589,7 @@ class STTService {
       _updateState(
         _currentState.copyWith(
           status: SttEngineStatus.ready,
-          message: 'Parakeet TDT STT Ready (On-Device)',
+          message: 'Whisper Tiny STT Ready (On-Device)',
         ),
       );
 
