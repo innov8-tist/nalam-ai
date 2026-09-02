@@ -75,7 +75,6 @@ class WelcomeScreen extends StatelessWidget {
                 const SizedBox(height: 18),
                 PrimaryButton(label: 'Get Started', onPressed: app.start),
                 const SizedBox(height: 14),
-                const OfflineBadge(),
               ],
             ),
           ),

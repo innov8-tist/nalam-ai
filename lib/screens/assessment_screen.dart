@@ -89,6 +89,7 @@ class _AssessmentScreenState extends State<AssessmentScreen>
               const SizedBox(height: 22),
               _ModelStatus(
                 state: app.modelState,
+                isOnline: app.isOnline,
                 onInitialize: () =>
                     app.llmService.initialize(autoDownload: true),
               ),
@@ -117,8 +118,12 @@ class _AssessmentScreenState extends State<AssessmentScreen>
                 ),
                 const SizedBox(height: 16),
                 PrimaryButton(
-                  label: 'Analyze On Device',
-                  icon: Icons.offline_bolt,
+                  label: app.isOnline
+                      ? 'Analyze with Server AI'
+                      : 'Analyze On Device',
+                  icon: app.isOnline
+                      ? Icons.cloud_outlined
+                      : Icons.offline_bolt,
                   onPressed: app.isAnalyzing ? null : _analyze,
                 ),
                 const SizedBox(height: 8),
@@ -138,8 +143,12 @@ class _AssessmentScreenState extends State<AssessmentScreen>
             ],
           ),
           if (app.isAnalyzing)
-            const Positioned.fill(
-              child: LoadingOverlay(label: 'Analyzing locally…'),
+            Positioned.fill(
+              child: LoadingOverlay(
+                label: app.lastAssessmentUsedServer
+                    ? 'Analyzing with server AI…'
+                    : 'Analyzing locally…',
+              ),
             ),
         ],
       ),
@@ -186,12 +195,18 @@ class _VoicePanel extends StatelessWidget {
 }
 
 class _ModelStatus extends StatelessWidget {
-  const _ModelStatus({required this.state, required this.onInitialize});
+  const _ModelStatus({
+    required this.state,
+    required this.isOnline,
+    required this.onInitialize,
+  });
   final LlmEngineState state;
+  final bool isOnline;
   final VoidCallback onInitialize;
   @override
   Widget build(BuildContext context) {
-    final ready = state.isReady || state.isGenerating;
+    final localReady = state.isReady || state.isGenerating;
+    final ready = isOnline || localReady;
     final busy =
         state.status == LlmEngineStatus.loading ||
         state.status == LlmEngineStatus.checking ||
@@ -201,7 +216,7 @@ class _ModelStatus extends StatelessWidget {
       color: ready ? AppColors.mint : null,
       child: Row(
         children: [
-          if (busy)
+          if (busy && !isOnline)
             const SizedBox(
               width: 20,
               height: 20,
@@ -209,7 +224,9 @@ class _ModelStatus extends StatelessWidget {
             )
           else
             Icon(
-              ready ? Icons.offline_bolt : Icons.info_outline,
+              isOnline
+                  ? Icons.cloud_done_outlined
+                  : (ready ? Icons.offline_bolt : Icons.info_outline),
               color: ready ? AppColors.primary : AppColors.urgent,
             ),
           const SizedBox(width: 10),
@@ -217,18 +234,23 @@ class _ModelStatus extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Offline AI • On-device analysis',
+                Text(
+                  isOnline
+                      ? 'Server AI • Higher accuracy'
+                      : 'Offline AI • On-device analysis',
                   style: TextStyle(fontWeight: FontWeight.w700),
                 ),
                 Text(
-                  state.message ?? (ready ? 'Model ready' : 'Model not loaded'),
+                  isOnline
+                      ? 'Local model remains available as a fallback'
+                      : (state.message ??
+                            (localReady ? 'Model ready' : 'Model not loaded')),
                   style: const TextStyle(fontSize: 12, color: AppColors.muted),
                 ),
               ],
             ),
           ),
-          if (!ready && !busy)
+          if (!isOnline && !localReady && !busy)
             TextButton(
               onPressed: onInitialize,
               child: Text(state.hasError ? 'Download / Retry' : 'Load'),

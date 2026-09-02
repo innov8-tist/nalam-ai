@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../state/app_controller.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_components.dart';
+import '../widgets/server_test_dialog.dart';
 import 'assessment_screen.dart';
 import 'monitoring_screen.dart';
 import 'profile_screen.dart';
@@ -89,6 +90,14 @@ class _HomeDashboardState extends State<HomeDashboard> {
         ),
         actions: [
           IconButton(
+            onPressed: () => showDialog(
+              context: context,
+              builder: (_) => const ServerTestDialog(),
+            ),
+            icon: const Icon(Icons.wifi_tethering),
+            tooltip: 'Test Server Connection',
+          ),
+          IconButton(
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const MonitoringScreen()),
@@ -101,8 +110,6 @@ class _HomeDashboardState extends State<HomeDashboard> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            const OfflineBadge(),
-            const SizedBox(height: 18),
             const Text(
               'നമസ്കാരം 👋',
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800),

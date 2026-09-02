@@ -4,33 +4,6 @@ import '../models/assessment_models.dart';
 import '../models/triage_result.dart';
 import '../theme/app_theme.dart';
 
-class OfflineBadge extends StatelessWidget {
-  const OfflineBadge({super.key});
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-    decoration: BoxDecoration(
-      color: AppColors.mint,
-      borderRadius: BorderRadius.circular(20),
-    ),
-    child: const Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(Icons.offline_bolt, size: 14, color: AppColors.primary),
-        SizedBox(width: 5),
-        Text(
-          'Offline Mode',
-          style: TextStyle(
-            fontSize: 12,
-            color: AppColors.primaryDark,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
 class PrimaryButton extends StatelessWidget {
   const PrimaryButton({
     required this.label,

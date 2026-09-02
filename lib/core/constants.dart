@@ -2,6 +2,12 @@ abstract final class AppConstants {
   static const String appName = 'NalamEdge';
   static const String workspaceTitle = 'Medical Triage Workspace';
 
+  /// Override for deployed builds with
+  /// `--dart-define=NALAM_API_BASE_URL=https://your-server.example`.
+  static const String remoteApiBaseUrl = String.fromEnvironment(
+    'NALAM_API_BASE_URL',
+  );
+
   // Piper TTS Models
   static const String piperModelsDir = 'models/piper';
   static const String piperEnglishModel = 'en_US-libritts-high';
