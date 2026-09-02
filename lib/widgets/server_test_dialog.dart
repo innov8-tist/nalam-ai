@@ -4,11 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 class ServerTestDialog extends StatefulWidget {
-<<<<<<< HEAD
-  const ServerTestDialog({required this.serverUri, super.key});
-
-  final Uri serverUri;
-=======
   final String? primaryUrl;
   final String? fallbackUrl;
 
@@ -17,7 +12,6 @@ class ServerTestDialog extends StatefulWidget {
     this.primaryUrl,
     this.fallbackUrl,
   });
->>>>>>> 68255cdb27864337510dfc537594c67fcca33991
 
   @override
   State<ServerTestDialog> createState() => _ServerTestDialogState();
@@ -39,29 +33,12 @@ class _ServerTestDialogState extends State<ServerTestDialog> {
   }
 
   Future<void> _testConnections() async {
-<<<<<<< HEAD
-    final aiHealthUri = widget.serverUri.replace(
-      path: '/health',
-      query: null,
-      fragment: null,
-    );
-    final smolVlmHealthUri = widget.serverUri.replace(
-      port: 8080,
-      path: '/health',
-      query: null,
-      fragment: null,
-    );
-
-    _testEndpoint(
-      aiHealthUri,
-=======
     final primaryBase = widget.primaryUrl ?? 'http://10.128.184.195:8000';
     final primaryHealth = primaryBase.endsWith('/') ? '${primaryBase}health' : '$primaryBase/health';
 
     // Test AI Service
     _testEndpoint(
-      primaryHealth,
->>>>>>> 68255cdb27864337510dfc537594c67fcca33991
+      Uri.parse(primaryHealth),
       onResult: (success, message) {
         if (mounted) {
           setState(() {
@@ -72,16 +49,12 @@ class _ServerTestDialogState extends State<ServerTestDialog> {
       },
     );
 
-<<<<<<< HEAD
-    _testEndpoint(
-      smolVlmHealthUri,
-=======
     // Test Fallback AI Service
     if (widget.fallbackUrl != null && widget.fallbackUrl!.isNotEmpty) {
       final fallbackBase = widget.fallbackUrl!;
       final fallbackHealth = fallbackBase.endsWith('/') ? '${fallbackBase}health' : '$fallbackBase/health';
       _testEndpoint(
-        fallbackHealth,
+        Uri.parse(fallbackHealth),
         onResult: (success, message) {
           if (mounted) {
             setState(() {
@@ -106,8 +79,7 @@ class _ServerTestDialogState extends State<ServerTestDialog> {
 
     // Test SmolVLM2 API
     _testEndpoint(
-      smolVlmUrl,
->>>>>>> 68255cdb27864337510dfc537594c67fcca33991
+      Uri.parse(smolVlmUrl),
       onResult: (success, message) {
         if (mounted) {
           setState(() {
@@ -143,38 +115,11 @@ class _ServerTestDialogState extends State<ServerTestDialog> {
     final hasFallback = widget.fallbackUrl != null && widget.fallbackUrl!.isNotEmpty;
     return AlertDialog(
       title: const Text('Server Connection Test'),
-<<<<<<< HEAD
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Testing connection to:',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          SelectableText(widget.serverUri.toString()),
-          const SizedBox(height: 16),
-          _buildTestResult(
-            'AI Service (port ${widget.serverUri.port})',
-            _aiServiceStatus,
-            _isTestingAi,
-          ),
-          const SizedBox(height: 12),
-          _buildTestResult(
-            'SmolVLM2 API (port 8080)',
-            _smolVlmStatus,
-            _isTestingVlm,
-          ),
-          const SizedBox(height: 16),
-          if (!_isTestingAi && !_isTestingVlm)
-=======
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
->>>>>>> 68255cdb27864337510dfc537594c67fcca33991
             const Text(
               'Configured Primary Server:',
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),

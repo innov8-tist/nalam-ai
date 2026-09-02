@@ -170,46 +170,54 @@ class AppController extends ChangeNotifier {
     session.modelOutputs.clear();
     notifyListeners();
     try {
-      final prompt = _triageService.buildAssessmentPrompt(
-        symptoms: symptoms,
-        hasImage: imagePath != null,
-        answers: session.answers,
-      );
-      final output = await _generateWithFallback(prompt, imagePath: imagePath);
-      session.modelOutputs.add(output);
-      var modelAssessment = ModelAssessment.fromRawOutput(output);
-      if (!modelAssessment.isComplete) {
-        try {
-          final repairedOutput = await _generateWithFallback(
-            _triageService.buildRepairPrompt(
-              previousOutput: output,
-              symptoms: symptoms,
-              hasImage: imagePath != null,
-              answers: session.answers,
-            ),
-            imagePath: imagePath,
-          );
-          session.modelOutputs.add(repairedOutput);
-          final repairedAssessment = ModelAssessment.fromRawOutput(
-            repairedOutput,
-          );
-          if (repairedAssessment.informationScore >
-              modelAssessment.informationScore) {
-            modelAssessment = repairedAssessment;
-          }
-        } catch (_) {
-          // Keep the first usable response if connectivity drops during repair.
-        }
+      final prompt = symptoms; // Direct symptoms, no JSON prompt
+      
+      print('🔵 [ANALYZE] Sending prompt to model (streaming)...');
+      print('🔵 [ANALYZE] Has image: ${imagePath != null}');
+      
+      // Stream the output token by token
+      final outputBuffer = StringBuffer();
+      await for (final token in _generateStreamWithFallback(prompt, imagePath: imagePath)) {
+        outputBuffer.write(token);
+        
+        // Update the model result with streaming content
+        session.modelResult = ModelAssessment(
+          rawOutput: outputBuffer.toString(),
+          summary: outputBuffer.toString(),
+          isStructured: false,
+        );
+        notifyListeners(); // Update UI with each token
       }
-      session.modelResult = modelAssessment;
+      
+      final output = outputBuffer.toString();
+      
+      print('🟢 [ANALYZE] ============ RAW MODEL OUTPUT ============');
+      print(output);
+      print('� [uANALYZE] ============ END RAW OUTPUT ============');
+      print('📏 Output length: ${output.length} characters');
+      
+      // Store the final output
+      session.modelOutputs.add(output);
+      
+      // Final model assessment already set during streaming
+      session.modelResult = ModelAssessment(
+        rawOutput: output,
+        summary: output.trim(),
+        isStructured: false,
+      );
+      
       session.triageResult = _triageService.assess(
         modelAssessment: session.modelResult!,
         symptoms: symptoms,
         answers: session.answers,
       );
+      
+      print('🟣 [ANALYZE] Triage result: ${session.triageResult!.urgency.name}');
+      
       session.recommendedFacility = _facilityService.getRecommendedFacility(
         session.triageResult!,
       );
+      
       history.insert(
         0,
         AssessmentHistoryEntry(
@@ -219,7 +227,9 @@ class AppController extends ChangeNotifier {
         ),
       );
       return true;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('❌ [ANALYZE] Error: $e');
+      print('📚 Stack trace: $stackTrace');
       assessmentError = 'Assessment failed: $e';
       return false;
     } finally {
@@ -234,6 +244,47 @@ class AppController extends ChangeNotifier {
         : 'Server unavailable and the on-device model is not ready yet.';
     notifyListeners();
     return false;
+  }
+
+  Stream<String> _generateStreamWithFallback(
+    String prompt, {
+    String? imagePath,
+  }) async* {
+    // For now, remote AI doesn't support streaming, so we get full response
+    if (isOnline) {
+      try {
+        final output = await remoteAiService.generateResponse(
+          prompt,
+          imagePath: imagePath,
+        );
+        lastAssessmentUsedServer = true;
+        // Yield the full output at once for remote
+        yield output;
+        return;
+      } catch (_) {
+        isOnline = false;
+        lastAssessmentUsedServer = false;
+        notifyListeners();
+      }
+    }
+    
+    if (!modelState.isReady) {
+      throw StateError(
+        'The server became unavailable and the local model is not ready.',
+      );
+    }
+    
+    // Stream from local model
+    await for (final token in llmService.generateStreaming(
+      prompt: prompt,
+      imagePath: imagePath,
+      config: const SmolVlmConfig(
+        maxTokens: 700,
+        temperature: 0.1,
+      ),
+    )) {
+      yield token;
+    }
   }
 
   Future<String> _generateWithFallback(

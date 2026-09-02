@@ -3,7 +3,7 @@ import '../../core/constants.dart';
 /// Formatter for constructing SmolVLM2 ChatML prompt templates.
 class SmolVlm2Formatter {
   const SmolVlm2Formatter({
-    this.defaultSystemPrompt = 'You are a helpful on-device assistant. Provide direct, concise, and clear answers.',
+    this.defaultSystemPrompt = 'You are a helpful medical assistant. Provide clear, concise, and accurate medical assessments based on the symptoms described.',
   });
 
   final String defaultSystemPrompt;

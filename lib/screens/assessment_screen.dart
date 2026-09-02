@@ -36,13 +36,20 @@ class _AssessmentScreenState extends State<AssessmentScreen>
   @override
   void initState() {
     super.initState();
-    _sttService = STTService();
-    _sttService.stateStream.listen((state) {
-      if (mounted) {
-        setState(() => _sttState = state);
-      }
-    });
-    _sttService.initialize();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_sttService == null) {
+      final app = AppScope.of(context);
+      _sttService = STTService(app.remoteAiService);
+      _sttSubscription = _sttService!.stateStream.listen((state) {
+        if (mounted) {
+          setState(() => _sttState = state);
+        }
+      });
+    }
   }
 
   @override
@@ -52,7 +59,6 @@ class _AssessmentScreenState extends State<AssessmentScreen>
     final service = _sttService;
     if (service != null) unawaited(service.dispose());
     symptoms.dispose();
-    _sttService.dispose();
     super.dispose();
   }
 
@@ -126,14 +132,20 @@ class _AssessmentScreenState extends State<AssessmentScreen>
 
   Future<void> _analyze() async {
     final app = AppScope.of(context);
+    
+    // Navigate to result screen immediately to show streaming
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const AssessmentResultScreen()),
+    );
+    
+    // Start analysis with streaming
     final ok = await app.analyze(symptoms: symptoms.text, imagePath: imagePath);
+    
     if (!mounted) return;
-    if (ok) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const AssessmentResultScreen()),
-      );
-    } else {
+    if (!ok) {
+      // Pop the result screen and show error
+      Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(app.assessmentError ?? 'Assessment failed.')),
       );
@@ -142,7 +154,9 @@ class _AssessmentScreenState extends State<AssessmentScreen>
 
   Future<void> _handleRecording() async {
     try {
-      final transcription = await _sttService.toggleRecording();
+      final service = _sttService;
+      if (service == null) return;
+      final transcription = await service.toggleRecording();
       if (transcription != null && transcription.isNotEmpty) {
         setState(() {
           symptoms.text = transcription;
@@ -263,14 +277,6 @@ class _AssessmentScreenState extends State<AssessmentScreen>
               const SizedBox(height: 16),
             ],
           ),
-          if (app.isAnalyzing)
-            Positioned.fill(
-              child: LoadingOverlay(
-                label: app.lastAssessmentUsedServer
-                    ? 'Analyzing with server AI…'
-                    : 'Analyzing locally…',
-              ),
-            ),
         ],
       ),
     );

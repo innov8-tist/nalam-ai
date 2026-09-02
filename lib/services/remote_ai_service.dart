@@ -56,9 +56,6 @@ class RemoteAiService {
   }
 
   static Uri get _defaultBaseUri {
-<<<<<<< HEAD
-    return AppConstants.serverUri;
-=======
     final configured = AppConstants.remoteApiBaseUrl.trim();
     return Uri.parse(configured);
   }
@@ -74,7 +71,6 @@ class RemoteAiService {
         ? uri
         : Uri.parse('${uri.toString()}/');
     return root.resolve(path);
->>>>>>> 68255cdb27864337510dfc537594c67fcca33991
   }
 
   Uri _endpoint(String path) {

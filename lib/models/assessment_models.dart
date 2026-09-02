@@ -15,21 +15,35 @@ class ModelAssessment {
   });
 
   factory ModelAssessment.fromRawOutput(String rawOutput) {
+    print('🔍 [PARSE] Starting to parse raw output...');
+    print('📏 Raw output length: ${rawOutput.length}');
+    print('📝 First 200 chars: ${rawOutput.substring(0, rawOutput.length > 200 ? 200 : rawOutput.length)}');
+    
     try {
       final jsonObject = _extractJsonObject(rawOutput);
       if (jsonObject == null) {
+        print('⚠️ [PARSE] No JSON object found in output, returning raw');
         return ModelAssessment(rawOutput: rawOutput);
       }
 
+      print('✅ [PARSE] JSON extracted, length: ${jsonObject.length}');
+      print('📝 JSON: $jsonObject');
+
       final decoded = jsonDecode(jsonObject);
       if (decoded is! Map<String, dynamic>) {
+        print('⚠️ [PARSE] Decoded JSON is not a Map, returning raw');
         return ModelAssessment(rawOutput: rawOutput);
       }
+
+      print('✅ [PARSE] JSON decoded successfully');
+      print('🔑 Keys: ${decoded.keys.toList()}');
 
       final nested = decoded['assessment'];
       final values = nested is Map
           ? Map<String, dynamic>.from(nested)
           : decoded;
+
+      print('📦 [PARSE] Using values from: ${nested is Map ? "nested 'assessment'" : "root"}');
 
       return ModelAssessment(
         rawOutput: rawOutput,

@@ -110,8 +110,23 @@ class SmolVlm2Engine implements BaseLlmEngine {
 
   /// Resolves the appropriate model API endpoint.
   Uri _resolveApiUri(String? explicitUrl) {
-    final rawUrl = explicitUrl ?? defaultApiUrl ?? AppConstants.smolVlmApiUrl;
-    return Uri.parse(rawUrl.trim());
+    // Default to port 8080 on the same host as the base API
+    final baseUrl = explicitUrl ?? defaultApiUrl;
+    if (baseUrl != null) {
+      return Uri.parse(baseUrl.trim());
+    }
+    
+    // Fallback: construct from remoteApiBaseUrl
+    try {
+      final baseUri = Uri.parse(AppConstants.remoteApiBaseUrl);
+      return baseUri.replace(
+        port: 8080,
+        path: '/v1/chat/completions',
+      );
+    } catch (_) {
+      // Last resort fallback
+      return Uri.parse('http://localhost:8080/v1/chat/completions');
+    }
   }
 
   @override
