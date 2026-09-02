@@ -15,8 +15,9 @@ class SmolVlm2LocalEngine implements BaseLlmEngine {
   final StreamController<String> _tokenController =
       StreamController<String>.broadcast();
 
-  LlmEngineState _currentState =
-      const LlmEngineState(status: LlmEngineStatus.uninitialized);
+  LlmEngineState _currentState = const LlmEngineState(
+    status: LlmEngineStatus.uninitialized,
+  );
 
   Completer<String>? _generationCompleter;
   StringBuffer _currentGenerationBuffer = StringBuffer();
@@ -124,11 +125,7 @@ class SmolVlm2LocalEngine implements BaseLlmEngine {
       ),
     );
 
-    _executeInference(
-      prompt: prompt,
-      imagePath: imagePath,
-      config: config,
-    );
+    _executeInference(prompt: prompt, imagePath: imagePath, config: config);
 
     return _tokenController.stream;
   }
@@ -164,6 +161,8 @@ class SmolVlm2LocalEngine implements BaseLlmEngine {
       await for (final chunk in _engine!.create(
         [message],
         params: genParams,
+        enableThinking: false,
+        responseFormat: config.responseFormat,
       )) {
         final token = chunk.choices.first.delta.content;
         if (token != null && token.isNotEmpty) {

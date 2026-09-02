@@ -11,13 +11,13 @@ import '../models/tts_state.dart';
 class TTSService {
   final FlutterTts _flutterTts = FlutterTts();
   bool _isInitialized = false;
-  bool _isSpeaking = false;
   final StreamController<TtsEngineState> _stateController =
       StreamController<TtsEngineState>.broadcast();
   final Dio _dio = Dio();
 
-  TtsEngineState _currentState =
-      const TtsEngineState(status: TtsEngineStatus.uninitialized);
+  TtsEngineState _currentState = const TtsEngineState(
+    status: TtsEngineStatus.uninitialized,
+  );
 
   Stream<TtsEngineState> get stateStream => _stateController.stream;
   TtsEngineState get currentState => _currentState;
@@ -28,7 +28,6 @@ class TTSService {
 
   void _setupTtsCallbacks() {
     _flutterTts.setCompletionHandler(() {
-      _isSpeaking = false;
       _updateState(
         TtsEngineState(
           status: TtsEngineStatus.ready,
@@ -39,7 +38,6 @@ class TTSService {
     });
 
     _flutterTts.setErrorHandler((message) {
-      _isSpeaking = false;
       _updateState(
         TtsEngineState(
           status: TtsEngineStatus.error,
@@ -49,7 +47,6 @@ class TTSService {
     });
 
     _flutterTts.setCancelHandler(() {
-      _isSpeaking = false;
       _updateState(
         TtsEngineState(
           status: TtsEngineStatus.ready,
@@ -64,24 +61,19 @@ class TTSService {
     if (_isInitialized) return;
 
     try {
-      _updateState(
-        const TtsEngineState(status: TtsEngineStatus.checking),
-      );
+      _updateState(const TtsEngineState(status: TtsEngineStatus.checking));
 
       // Quick initialization without waiting indefinitely
       await Future.wait([
-        _flutterTts.setLanguage('en-US').timeout(
-          const Duration(seconds: 5),
-          onTimeout: () => null,
-        ),
-        _flutterTts.setSpeechRate(0.5).timeout(
-          const Duration(seconds: 5),
-          onTimeout: () => null,
-        ),
-        _flutterTts.setPitch(1.0).timeout(
-          const Duration(seconds: 5),
-          onTimeout: () => null,
-        ),
+        _flutterTts
+            .setLanguage('en-US')
+            .timeout(const Duration(seconds: 5), onTimeout: () => null),
+        _flutterTts
+            .setSpeechRate(0.5)
+            .timeout(const Duration(seconds: 5), onTimeout: () => null),
+        _flutterTts
+            .setPitch(1.0)
+            .timeout(const Duration(seconds: 5), onTimeout: () => null),
       ], eagerError: false);
 
       // Check if models are already downloaded
@@ -112,7 +104,9 @@ class TTSService {
   Future<bool> _checkModelsExist() async {
     try {
       final appDir = await getApplicationDocumentsDirectory();
-      final modelsDir = Directory('${appDir.path}/${AppConstants.piperModelsDir}');
+      final modelsDir = Directory(
+        '${appDir.path}/${AppConstants.piperModelsDir}',
+      );
       return modelsDir.existsSync();
     } catch (_) {
       return false;
@@ -129,7 +123,9 @@ class TTSService {
       );
 
       final appDir = await getApplicationDocumentsDirectory();
-      final modelsDir = Directory('${appDir.path}/${AppConstants.piperModelsDir}');
+      final modelsDir = Directory(
+        '${appDir.path}/${AppConstants.piperModelsDir}',
+      );
 
       if (!modelsDir.existsSync()) {
         modelsDir.createSync(recursive: true);
@@ -211,22 +207,16 @@ class TTSService {
     }
 
     try {
-      _isSpeaking = true;
-      _updateState(
-        const TtsEngineState(status: TtsEngineStatus.speaking),
-      );
+      _updateState(const TtsEngineState(status: TtsEngineStatus.speaking));
 
-      await _flutterTts.setLanguage(languageCode).timeout(
-        const Duration(seconds: 5),
-        onTimeout: () => null,
-      );
+      await _flutterTts
+          .setLanguage(languageCode)
+          .timeout(const Duration(seconds: 5), onTimeout: () => null);
 
-      await _flutterTts.speak(text).timeout(
-        const Duration(seconds: 2),
-        onTimeout: () => null,
-      );
+      await _flutterTts
+          .speak(text)
+          .timeout(const Duration(seconds: 2), onTimeout: () => null);
     } catch (e) {
-      _isSpeaking = false;
       _updateState(
         TtsEngineState(
           status: TtsEngineStatus.error,
@@ -239,7 +229,6 @@ class TTSService {
 
   Future<void> stop() async {
     try {
-      _isSpeaking = false;
       await _flutterTts.stop().timeout(
         const Duration(seconds: 2),
         onTimeout: () => null,
@@ -252,7 +241,6 @@ class TTSService {
         ),
       );
     } catch (e) {
-      _isSpeaking = false;
       _updateState(
         TtsEngineState(
           status: TtsEngineStatus.ready,
@@ -271,24 +259,21 @@ class TTSService {
   }
 
   Future<void> setLanguage(String languageCode) async {
-    await _flutterTts.setLanguage(languageCode).timeout(
-      const Duration(seconds: 2),
-      onTimeout: () => null,
-    );
+    await _flutterTts
+        .setLanguage(languageCode)
+        .timeout(const Duration(seconds: 2), onTimeout: () => null);
   }
 
   Future<void> setSpeechRate(double rate) async {
-    await _flutterTts.setSpeechRate(rate.clamp(0.0, 1.0)).timeout(
-      const Duration(seconds: 2),
-      onTimeout: () => null,
-    );
+    await _flutterTts
+        .setSpeechRate(rate.clamp(0.0, 1.0))
+        .timeout(const Duration(seconds: 2), onTimeout: () => null);
   }
 
   Future<void> setPitch(double pitch) async {
-    await _flutterTts.setPitch(pitch.clamp(0.5, 2.0)).timeout(
-      const Duration(seconds: 2),
-      onTimeout: () => null,
-    );
+    await _flutterTts
+        .setPitch(pitch.clamp(0.5, 2.0))
+        .timeout(const Duration(seconds: 2), onTimeout: () => null);
   }
 
   void _updateState(TtsEngineState state) {

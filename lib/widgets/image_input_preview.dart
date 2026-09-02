@@ -101,13 +101,12 @@ class ImageInputPreview extends StatelessWidget {
                   ? Image.file(
                       file,
                       fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => const Center(
-                        child: Text('Failed to load image preview'),
-                      ),
+                      errorBuilder: (context, error, stackTrace) =>
+                          const Center(
+                            child: Text('Failed to load image preview'),
+                          ),
                     )
-                  : const Center(
-                      child: Text('Image file not found'),
-                    ),
+                  : const Center(child: Text('Image file not found')),
             ),
           ),
           Positioned(
@@ -132,9 +131,7 @@ class ImageInputPreview extends StatelessWidget {
     return OutlinedButton.icon(
       style: OutlinedButton.styleFrom(
         minimumSize: const Size.fromHeight(48),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
       onPressed: enabled ? () => _showImageSourceSheet(context) : null,
       icon: const Icon(Icons.add_a_photo_outlined),
