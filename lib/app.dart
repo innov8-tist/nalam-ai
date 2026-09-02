@@ -20,6 +20,26 @@ class ConnectionStatusBar extends StatelessWidget {
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
+<<<<<<< HEAD
+          title: const Text('Nalam server'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'This is the single server address used by health checks, '
+                'assessment, and voice transcription. Build default: '
+                '${AppConstants.serverUrl}',
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: input,
+                keyboardType: TextInputType.url,
+                autocorrect: false,
+                decoration: InputDecoration(
+                  labelText: 'Server address',
+                  errorText: error,
+=======
           title: const Text('Nalam server configuration'),
           content: SingleChildScrollView(
             child: Column(
@@ -29,6 +49,7 @@ class ConnectionStatusBar extends StatelessWidget {
                 const Text(
                   'Primary Server (Local Wi-Fi):',
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+>>>>>>> 68255cdb27864337510dfc537594c67fcca33991
                 ),
                 const SizedBox(height: 4),
                 const Text(

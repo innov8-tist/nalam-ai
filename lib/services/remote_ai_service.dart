@@ -56,6 +56,9 @@ class RemoteAiService {
   }
 
   static Uri get _defaultBaseUri {
+<<<<<<< HEAD
+    return AppConstants.serverUri;
+=======
     final configured = AppConstants.remoteApiBaseUrl.trim();
     return Uri.parse(configured);
   }
@@ -71,6 +74,7 @@ class RemoteAiService {
         ? uri
         : Uri.parse('${uri.toString()}/');
     return root.resolve(path);
+>>>>>>> 68255cdb27864337510dfc537594c67fcca33991
   }
 
   Uri _endpoint(String path) {
@@ -152,6 +156,47 @@ class RemoteAiService {
       throw const RemoteAiException('Server returned an empty response.');
     }
     return result.trim();
+  }
+
+  Future<String> transcribeAudio(
+    String audioPath, {
+    String languageCode = 'unknown',
+    Duration timeout = const Duration(seconds: 45),
+  }) async {
+    final request = http.MultipartRequest('POST', _endpoint('transcribe'))
+      ..fields['language_code'] = languageCode
+      ..files.add(
+        await http.MultipartFile.fromPath(
+          'audio',
+          audioPath,
+          contentType: MediaType('audio', 'wav'),
+        ),
+      );
+
+    final streamed = await _client.send(request).timeout(timeout);
+    final response = await http.Response.fromStream(streamed);
+    Map<String, dynamic>? payload;
+    try {
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map) payload = Map<String, dynamic>.from(decoded);
+    } catch (_) {}
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      final detail = payload?['detail']?.toString();
+      throw RemoteAiException(
+        detail?.isNotEmpty == true
+            ? detail!
+            : 'Transcription server returned HTTP ${response.statusCode}.',
+      );
+    }
+
+    final transcript = payload?['transcript'];
+    if (transcript is! String || transcript.trim().isEmpty) {
+      throw const RemoteAiException(
+        'No speech was recognized. Please try again and speak clearly.',
+      );
+    }
+    return transcript.trim();
   }
 
   MediaType _imageContentType(String path) {
