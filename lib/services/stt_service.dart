@@ -182,7 +182,7 @@ class STTService {
       }
 
       // For legacy GGML .bin files, link to expected name
-      final expectedPath = '${dir.path}/ggml-tiny.bin';
+      final expectedPath = '${dir.path}/ggml-base.bin';
       final expectedFile = File(expectedPath);
       if (!expectedFile.existsSync() || expectedFile.lengthSync() != actualFile.lengthSync()) {
         if (expectedFile.existsSync()) {
@@ -220,7 +220,7 @@ class STTService {
               status: SttEngineStatus.error,
               message: 'STT model weights not found on device',
               error:
-          'Whisper Tiny model not found in storage. Tap "Download Model" to download the model once for offline edge transcription.',
+          'Whisper Base model not found in storage. Tap "Download Model" to download the model once for offline edge transcription.',
             ),
           );
           return;
@@ -230,14 +230,14 @@ class STTService {
       final dir = await getModelDirectory();
       await _ensureModelLinked(dir);
       _whisper = Whisper(
-        model: WhisperModel.tiny,
+        model: WhisperModel.base,
         modelDir: dir.path,
       );
 
       _updateState(
         _currentState.copyWith(
           status: SttEngineStatus.ready,
-          message: 'Whisper Tiny STT Ready (On-Device)',
+          message: 'Whisper Base STT Ready (On-Device)',
         ),
       );
     } catch (e) {
@@ -327,14 +327,14 @@ class STTService {
 
       await _ensureModelLinked(dir);
       _whisper = Whisper(
-        model: WhisperModel.tiny,
+        model: WhisperModel.base,
         modelDir: dir.path,
       );
 
       _updateState(
         _currentState.copyWith(
           status: SttEngineStatus.ready,
-          message: 'Whisper Tiny STT Ready (On-Device)',
+          message: 'Whisper Base STT Ready (On-Device)',
           downloadProgress: 1.0,
         ),
       );
@@ -589,7 +589,7 @@ class STTService {
       _updateState(
         _currentState.copyWith(
           status: SttEngineStatus.ready,
-          message: 'Whisper Tiny STT Ready (On-Device)',
+          message: 'Whisper Base STT Ready (On-Device)',
         ),
       );
 

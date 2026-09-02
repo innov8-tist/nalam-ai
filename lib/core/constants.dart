@@ -32,9 +32,9 @@ abstract final class AppConstants {
 
   // Whisper Speech-to-Text Defaults
   static const String whisperModelDir = 'models/whisper';
-  static const String whisperModelFileName = 'ggml-tiny.bin';
+  static const String whisperModelFileName = 'ggml-base.bin';
   static const String whisperModelDownloadUrl =
-      'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.bin';
+      'https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin';
   static const String whisperModelMirrorDownloadUrl =
-      'https://hf-mirror.com/ggerganov/whisper.cpp/resolve/main/ggml-tiny.bin';
+      'https://hf-mirror.com/ggerganov/whisper.cpp/resolve/main/ggml-base.bin';
 }
