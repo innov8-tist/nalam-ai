@@ -2,18 +2,18 @@
 
 ## Configuration Complete ✅
 
-Your app is now configured to connect to your laptop server at **172.20.10.9**
+Your app is now configured to connect to your laptop server at **10.128.184.195**
 
 ## What Was Changed:
 
 ### 1. SmolVLM2 API Endpoint
 **File:** `lib/core/constants.dart`
-- Default API URL: `http://172.20.10.9:8080/v1/chat/completions`
-- Android Emulator API URL: `http://172.20.10.9:8080/v1/chat/completions`
+- Default API URL: `http://10.128.184.195:8080/v1/chat/completions`
+- Android Emulator API URL: `http://10.128.184.195:8080/v1/chat/completions`
 
 ### 2. Remote AI Service
 **File:** `lib/services/remote_ai_service.dart`
-- Default base URI: `http://172.20.10.9:8000`
+- Default base URI: `http://10.128.184.195:8000`
 
 ### 3. Android Permissions
 **File:** `android/app/src/main/AndroidManifest.xml`
@@ -24,12 +24,12 @@ Your app is now configured to connect to your laptop server at **172.20.10.9**
 
 ### 1. Start Your Laptop Server
 Make sure your server is running on your laptop at:
-- AI Service: `http://172.20.10.9:8000`
-- SmolVLM2 API: `http://172.20.10.9:8080`
+- AI Service: `http://10.128.184.195:8000`
+- SmolVLM2 API: `http://10.128.184.195:8080`
 
 ### 2. Connect Your Phone to Same WiFi
 - Your phone must be on the same WiFi network as your laptop
-- IP: 172.20.10.9
+- IP: 10.128.184.195
 
 ### 3. Run the App
 ```bash
@@ -42,14 +42,14 @@ The app will automatically connect to your laptop server.
 
 ### Test from Phone Browser:
 1. Open browser on your phone
-2. Visit: `http://172.20.10.9:8000/health`
+2. Visit: `http://10.128.184.195:8000/health`
 3. Should see: `{"status": "healthy"}`
 
 ### Test from Laptop:
 ```bash
 # Check if server is accessible
-curl http://172.20.10.9:8000/health
-curl http://172.20.10.9:8080/health
+curl http://10.128.184.195:8000/health
+curl http://10.128.184.195:8080/health
 ```
 
 ## Troubleshooting:
@@ -69,13 +69,13 @@ Your server should bind to `0.0.0.0:8000` not `127.0.0.1:8000`
 **3. Test connection from phone:**
 ```bash
 # From phone's terminal or browser
-ping 172.20.10.9
-curl http://172.20.10.9:8000/health
+ping 10.128.184.195
+curl http://10.128.184.195:8000/health
 ```
 
 **4. Check both devices are on same WiFi:**
 - Phone WiFi SSID = Laptop WiFi SSID
-- Both should be on 172.20.10.x subnet
+- Both should be on 10.128.184.x subnet
 
 ### If IP address changes:
 

@@ -11,6 +11,7 @@ import uvicorn
 import json
 import re
 from struct_llm import MedicalTriageResponse
+from pydantic import ValidationError
 
 load_dotenv()
 
@@ -94,19 +95,27 @@ def encode_image(image_bytes: bytes) -> str:
 
 def extract_json_from_response(response_text: str) -> dict:
     """Extract JSON from LLM response, handling markdown code blocks and extra text"""
+    if not response_text or not isinstance(response_text, str):
+        raise ValueError("Response text is empty or not a string")
     try:
         # Try to parse directly first
         return json.loads(response_text)
-    except json.JSONDecodeError:
+    except Exception:
         # Remove markdown code blocks if present
         json_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', response_text, re.DOTALL)
         if json_match:
-            return json.loads(json_match.group(1))
+            try:
+                return json.loads(json_match.group(1))
+            except Exception:
+                pass
         
         # Try to find JSON object in the text
         json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
         if json_match:
-            return json.loads(json_match.group(0))
+            try:
+                return json.loads(json_match.group(0))
+            except Exception:
+                pass
         
         raise ValueError("No valid JSON found in response")
 
@@ -116,7 +125,7 @@ async def chat_with_ai(
     text_prompt: Optional[str] = Form(None),
     audio: Optional[UploadFile] = File(None),
     image: Optional[UploadFile] = File(None)
-):
+):            
     """
     Chat with Nalam AI using text/audio prompts and optional images
     
@@ -125,14 +134,16 @@ async def chat_with_ai(
     - audio: Audio file (will be converted to text via Sarvam)
     - image: Image file to analyze
     """
-    
+    print("HIII")
+    print(f"[CHAT] Received request: text_prompt={text_prompt[:100] if text_prompt else 'None'}..., has_image={image is not None}, has_audio={audio is not None}")
     try:
         # Get the text prompt from either text or audio
         user_message = text_prompt
         
-        if audio:
+        if audio and audio.filename:
             audio_bytes = await audio.read()
-            user_message = convert_audio_to_text(audio_bytes)
+            if len(audio_bytes) > 0:
+                user_message = convert_audio_to_text(audio_bytes)
         
         if not user_message:
             raise HTTPException(status_code=400, detail="Either text_prompt or audio must be provided")
@@ -143,23 +154,27 @@ async def chat_with_ai(
         ]
         
         # Add image if provided
-        if image:
+        if image and image.filename:
             image_bytes = await image.read()
-            image_base64 = encode_image(image_bytes)
-            image_type = image.content_type or "image/jpeg"
-            
-            message_content.append({
-                "type": "image_url",
-                "image_url": f"data:{image_type};base64,{image_base64}"
-            })
+            if len(image_bytes) > 0:
+                image_base64 = encode_image(image_bytes)
+                image_type = image.content_type or "image/jpeg"
+                
+                message_content.append({
+                    "type": "image_url",
+                    "image_url": {
+                        "url": f"data:{image_type};base64,{image_base64}"
+                    }
+                })
         
         # Create message and get response
         message = HumanMessage(content=message_content)
         response = model.invoke([message])
-        
+        print(response)
         # Extract and validate structured JSON
         try:
             json_data = extract_json_from_response(response.content)
+            print(json_data)
             validated_response = MedicalTriageResponse(**json_data)
             
             return JSONResponse(content={
@@ -168,8 +183,9 @@ async def chat_with_ai(
                 "response": validated_response.model_dump(),
                 "has_image": image is not None
             })
-        except (json.JSONDecodeError, ValueError) as e:
-            # If JSON extraction fails, return raw response
+        except (json.JSONDecodeError, ValueError, ValidationError) as e:
+            # If JSON extraction or validation fails, return raw response
+            print(f"Validation or decoding failed, returning raw response: {e}")
             return JSONResponse(content={
                 "success": True,
                 "user_input": user_message,
@@ -181,6 +197,9 @@ async def chat_with_ai(
     except HTTPException as he:
         raise he
     except Exception as e:
+        import traceback
+        print("EXCEPTION IN CHAT ENDPOINT:")
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 

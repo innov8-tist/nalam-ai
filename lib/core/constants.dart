@@ -6,6 +6,14 @@ abstract final class AppConstants {
   /// `--dart-define=NALAM_API_BASE_URL=https://your-server.example`.
   static const String remoteApiBaseUrl = String.fromEnvironment(
     'NALAM_API_BASE_URL',
+    defaultValue: 'http://localhost:8000',
+  );
+
+  /// Optional fallback/internet-facing API URL when local connection fails or phone is on cellular/internet.
+  /// Override with `--dart-define=NALAM_API_FALLBACK_URL=https://your-fallback-server.example`.
+  static const String remoteApiFallbackUrl = String.fromEnvironment(
+    'NALAM_API_FALLBACK_URL',
+    defaultValue: '',
   );
 
   // Piper TTS Models

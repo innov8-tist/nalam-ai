@@ -49,3 +49,5 @@ app.*.map.json
 
 .env
 .venv
+env.json
+logic/.env

@@ -92,7 +92,10 @@ class _HomeDashboardState extends State<HomeDashboard> {
           IconButton(
             onPressed: () => showDialog(
               context: context,
-              builder: (_) => const ServerTestDialog(),
+              builder: (_) => ServerTestDialog(
+                primaryUrl: app.serverUrl,
+                fallbackUrl: app.fallbackServerUrl,
+              ),
             ),
             icon: const Icon(Icons.wifi_tethering),
             tooltip: 'Test Server Connection',

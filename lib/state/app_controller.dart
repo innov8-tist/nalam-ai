@@ -43,6 +43,7 @@ class AppController extends ChangeNotifier {
 
   LlmEngineState get modelState => llmService.currentState;
   String get serverUrl => remoteAiService.baseUri.toString();
+  String get fallbackServerUrl => remoteAiService.fallbackUri?.toString() ?? '';
 
   Future<void> initialize() async {
     await _loadPreferences();
@@ -88,21 +89,39 @@ class AppController extends ChangeNotifier {
   }
 
   Future<bool> setRemoteServerUrl(String value) async {
+    return setServerUrls(primaryUrl: value, fallbackUrl: fallbackServerUrl);
+  }
+
+  Future<bool> setServerUrls({
+    required String primaryUrl,
+    required String fallbackUrl,
+  }) async {
     assessmentError = null;
     try {
-      remoteAiService.setBaseUrl(value);
+      remoteAiService.setBaseUrl(primaryUrl);
     } on FormatException catch (error) {
-      assessmentError = error.message;
+      assessmentError = 'Primary URL: ${error.message}';
       notifyListeners();
       return false;
     }
+
+    try {
+      remoteAiService.setFallbackUrl(fallbackUrl);
+    } on FormatException catch (error) {
+      assessmentError = 'Fallback URL: ${error.message}';
+      notifyListeners();
+      return false;
+    }
+
     _preferences['server_url'] = serverUrl;
+    _preferences['fallback_server_url'] = fallbackServerUrl;
     isOnline = false;
     notifyListeners();
     await _savePreferences();
+
     final available = await refreshConnectivity();
     if (!available) {
-      assessmentError = 'Could not reach $serverUrl/health';
+      assessmentError = 'Could not reach either primary or fallback server/health';
       notifyListeners();
     }
     return available;
@@ -120,6 +139,8 @@ class AppController extends ChangeNotifier {
         languageCode = _preferences['language'] as String? ?? 'en';
         final savedServerUrl = _preferences['server_url'] as String?;
         if (savedServerUrl != null) remoteAiService.setBaseUrl(savedServerUrl);
+        final savedFallbackUrl = _preferences['fallback_server_url'] as String?;
+        if (savedFallbackUrl != null) remoteAiService.setFallbackUrl(savedFallbackUrl);
       }
     } catch (_) {}
     if (!_isDisposed) notifyListeners();

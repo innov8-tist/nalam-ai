@@ -1,17 +1,17 @@
 #!/bin/bash
 
 # Test connection from your phone to laptop server
-echo "Testing connection to laptop server at 172.20.10.9..."
+echo "Testing connection to laptop server at 10.128.184.195..."
 echo ""
 
 # Test main API
 echo "1. Testing AI Service (port 8000):"
-curl -s -m 5 http://172.20.10.9:8000/health && echo "✅ AI Service is accessible" || echo "❌ AI Service not reachable"
+curl -s -m 5 http://10.128.184.195:8000/health && echo "✅ AI Service is accessible" || echo "❌ AI Service not reachable"
 echo ""
 
 # Test SmolVLM2 API
 echo "2. Testing SmolVLM2 API (port 8080):"
-curl -s -m 5 http://172.20.10.9:8080/health && echo "✅ SmolVLM2 API is accessible" || echo "❌ SmolVLM2 API not reachable"
+curl -s -m 5 http://10.128.184.195:8080/health && echo "✅ SmolVLM2 API is accessible" || echo "❌ SmolVLM2 API not reachable"
 echo ""
 
 # Show laptop's listening ports
