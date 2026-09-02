@@ -160,11 +160,19 @@ class AppController extends ChangeNotifier {
       notifyListeners();
       return false;
     }
-    if (!isOnline) await refreshConnectivity();
-    if (!isOnline && !modelState.isReady) return _reportNoInferenceAvailable();
+    
+    // Reset state before starting
     isAnalyzing = true;
-    lastAssessmentUsedServer = isOnline;
     assessmentError = null;
+    notifyListeners();
+    
+    if (!isOnline) await refreshConnectivity();
+    if (!isOnline && !modelState.isReady) {
+      isAnalyzing = false;
+      return _reportNoInferenceAvailable();
+    }
+    
+    lastAssessmentUsedServer = isOnline;
     session.originalText = symptoms.trim();
     session.imagePath = imagePath;
     session.modelOutputs.clear();

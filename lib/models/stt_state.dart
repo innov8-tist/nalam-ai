@@ -1,4 +1,4 @@
-enum SttEngineStatus { ready, recording, transcribing, error }
+enum SttEngineStatus { ready, recording, transcribing, downloading, error }
 
 class SttEngineState {
   const SttEngineState({

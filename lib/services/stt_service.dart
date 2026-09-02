@@ -3,17 +3,17 @@ import 'dart:io';
 
 import 'package:path_provider/path_provider.dart';
 import 'package:record/record.dart';
+import 'package:whisper_flutter_new/whisper_flutter_new.dart';
 
 import '../models/stt_state.dart';
-import 'remote_ai_service.dart';
 
-/// Records a short voice note and sends it to the Nalam server for Sarvam STT.
+/// Records voice and transcribes using local Whisper model
 class STTService {
-  STTService(this._remoteAiService, {AudioRecorder? recorder})
+  STTService({AudioRecorder? recorder})
     : _recorder = recorder ?? AudioRecorder();
 
-  final RemoteAiService _remoteAiService;
   final AudioRecorder _recorder;
+  Whisper? _whisper;
   final StreamController<SttEngineState> _stateController =
       StreamController<SttEngineState>.broadcast();
 
@@ -29,6 +29,40 @@ class STTService {
   void _updateState(SttEngineState state) {
     _currentState = state;
     if (!_stateController.isClosed) _stateController.add(state);
+  }
+
+  Future<void> initialize() async {
+    try {
+      print('🎤 [STT] Initializing Whisper...');
+      
+      // Get app directory for storing models
+      final appDir = await getApplicationDocumentsDirectory();
+      
+      // Initialize Whisper with base model
+      // The package will auto-download on first use
+      _whisper = Whisper(
+        model: WhisperModel.base,
+        modelDir: appDir.path,
+      );
+      
+      print('🎤 [STT] Whisper initialized successfully');
+      
+      _updateState(
+        const SttEngineState(
+          status: SttEngineStatus.ready,
+          message: 'Tap the microphone to start speaking.',
+        ),
+      );
+    } catch (error) {
+      print('❌ [STT] Initialization error: $error');
+      _updateState(
+        SttEngineState(
+          status: SttEngineStatus.error,
+          message: 'Failed to initialize Whisper',
+          error: error.toString(),
+        ),
+      );
+    }
   }
 
   Future<void> startRecording() async {
@@ -83,7 +117,7 @@ class STTService {
     _updateState(
       const SttEngineState(
         status: SttEngineStatus.transcribing,
-        message: 'Converting your speech to text…',
+        message: 'Transcribing with local Whisper model…',
       ),
     );
 
@@ -101,10 +135,33 @@ class STTService {
         );
       }
 
-      final transcript = await _remoteAiService.transcribeAudio(
-        path,
-        languageCode: languageCode,
+      if (_whisper == null) {
+        throw const SttException('Whisper model not initialized');
+      }
+
+      print('🎤 [STT] Transcribing audio file: $path');
+      
+      // Create transcribe request
+      final request = TranscribeRequest(
+        audio: path,
+        language: languageCode == 'ml-IN' ? 'ml' : 'en',
+        isTranslate: false,
+        isNoTimestamps: true,
+        threads: 4,
       );
+      
+      // Transcribe with Whisper
+      final response = await _whisper!.transcribe(transcribeRequest: request);
+      final transcript = response.text.trim();
+      
+      print('🎤 [STT] Transcription result: $transcript');
+      
+      if (transcript.isEmpty) {
+        throw const SttException(
+          'No speech was recognized. Please try speaking more clearly.',
+        );
+      }
+      
       _updateState(
         const SttEngineState(
           status: SttEngineStatus.ready,
@@ -113,6 +170,7 @@ class STTService {
       );
       return transcript;
     } catch (error) {
+      print('❌ [STT] Transcription error: $error');
       final message = error is SttException
           ? error.message
           : 'Transcription failed: $error';

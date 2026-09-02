@@ -20,7 +20,6 @@ class AssessmentScreen extends StatefulWidget {
 
 class _AssessmentScreenState extends State<AssessmentScreen>
     with AutomaticKeepAliveClientMixin {
-  int tab = 0;
   String? imagePath;
   final symptoms = TextEditingController();
   STTService? _sttService;
@@ -42,13 +41,14 @@ class _AssessmentScreenState extends State<AssessmentScreen>
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (_sttService == null) {
-      final app = AppScope.of(context);
-      _sttService = STTService(app.remoteAiService);
+      _sttService = STTService();
       _sttSubscription = _sttService!.stateStream.listen((state) {
         if (mounted) {
           setState(() => _sttState = state);
         }
       });
+      // Initialize Whisper model
+      _sttService!.initialize();
     }
   }
 
@@ -65,10 +65,11 @@ class _AssessmentScreenState extends State<AssessmentScreen>
   STTService _getSttService(AppController app) {
     final existing = _sttService;
     if (existing != null) return existing;
-    final service = STTService(app.remoteAiService);
+    final service = STTService();
     _sttSubscription = service.stateStream.listen((state) {
       if (mounted) setState(() => _sttState = state);
     });
+    service.initialize();
     _sttService = service;
     return service;
   }
@@ -77,27 +78,20 @@ class _AssessmentScreenState extends State<AssessmentScreen>
     final app = AppScope.of(context);
     final existingService = _sttService;
 
-    if (existingService == null || !existingService.currentState.isRecording) {
-      final online = app.isOnline || await app.refreshConnectivity();
-      if (!mounted) return;
-      if (!online) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Voice transcription needs a connection to the Nalam server.',
-            ),
-          ),
-        );
-        return;
-      }
-    }
+    print('🎤 [VOICE] Toggle voice input called');
+    print('🎤 [VOICE] Existing service: ${existingService != null}');
+    print('🎤 [VOICE] Is recording: ${existingService?.currentState.isRecording ?? false}');
+
     final service = _getSttService(app);
 
     try {
       if (service.currentState.isRecording) {
+        print('🎤 [VOICE] Stopping recording and transcribing...');
         await _finishVoiceInput(service, app.languageCode);
       } else {
+        print('🎤 [VOICE] Starting recording...');
         await service.startRecording();
+        print('🎤 [VOICE] Recording started successfully');
         _recordingTimer?.cancel();
         // Sarvam's synchronous endpoint is intended for clips under 30 seconds.
         _recordingTimer = Timer(const Duration(seconds: 29), () {
@@ -107,6 +101,7 @@ class _AssessmentScreenState extends State<AssessmentScreen>
         });
       }
     } catch (error) {
+      print('❌ [VOICE] Error: $error');
       if (!mounted) return;
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(error.toString())));
@@ -123,7 +118,6 @@ class _AssessmentScreenState extends State<AssessmentScreen>
     setState(() {
       symptoms.text = transcript;
       symptoms.selection = TextSelection.collapsed(offset: transcript.length);
-      tab = 1;
     });
     ScaffoldMessenger.of(
       context,
@@ -133,224 +127,137 @@ class _AssessmentScreenState extends State<AssessmentScreen>
   Future<void> _analyze() async {
     final app = AppScope.of(context);
     
-    // Navigate to result screen immediately to show streaming
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const AssessmentResultScreen()),
-    );
-    
     // Start analysis with streaming
-    final ok = await app.analyze(symptoms: symptoms.text, imagePath: imagePath);
+    final analysisFuture = app.analyze(symptoms: symptoms.text, imagePath: imagePath);
+    
+    // Navigate to result screen immediately to show streaming
+    if (mounted) {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const AssessmentResultScreen()),
+      );
+      // When user navigates back, force rebuild to update button state
+      if (mounted) setState(() {});
+    }
+    
+    // Wait for analysis to complete
+    final ok = await analysisFuture;
     
     if (!mounted) return;
     if (!ok) {
-      // Pop the result screen and show error
-      Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(app.assessmentError ?? 'Assessment failed.')),
       );
     }
   }
 
-  Future<void> _handleRecording() async {
-    try {
-      final service = _sttService;
-      if (service == null) return;
-      final transcription = await service.toggleRecording();
-      if (transcription != null && transcription.isNotEmpty) {
-        setState(() {
-          symptoms.text = transcription;
-          tab = 1; // Switch to text tab to show result
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Recording error: $e')),
-        );
-      }
-    }
-  }
+
 
   @override
   Widget build(BuildContext context) {
     super.build(context);
     final app = AppScope.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Assessment')),
-      body: Stack(
+      appBar: AppBar(title: const Text('Chat')),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
         children: [
-          ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              const Text(
-                'How can we help you today?',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
-              ),
-              const Text(
-                'Describe your symptoms',
-                style: TextStyle(color: AppColors.muted),
-              ),
-              const SizedBox(height: 16),
-              SegmentedButton<int>(
-                segments: const [
-                  ButtonSegment(
-                    value: 0,
-                    icon: Icon(Icons.mic_none),
-                    label: Text('Voice'),
-                  ),
-                  ButtonSegment(
-                    value: 1,
-                    icon: Icon(Icons.notes),
-                    label: Text('Text'),
-                  ),
-                  ButtonSegment(
-                    value: 2,
-                    icon: Icon(Icons.image_outlined),
-                    label: Text('Image'),
-                  ),
-                ],
-                selected: {tab},
-                onSelectionChanged: (value) =>
-                    setState(() => tab = value.first),
-                showSelectedIcon: false,
-              ),
-              const SizedBox(height: 22),
-              _ModelStatus(
-                state: app.modelState,
-                isOnline: app.isOnline,
-                onInitialize: () =>
-                    app.llmService.initialize(autoDownload: true),
-              ),
-              const SizedBox(height: 18),
-              if (tab == 0)
-                _VoicePanel(
-                  state: _sttState,
-                  onMicrophonePressed: _sttState.isTranscribing
-                      ? null
-                      : _toggleVoiceInput,
-                  onUseText: () => setState(() => tab = 1),
-                )
-              else ...[
-                if (tab == 2) ...[
-                  ImageInputPreview(
-                    selectedImagePath: imagePath,
-                    onImageSelected: (path) => setState(() => imagePath = path),
-                    onImageRemoved: () => setState(() => imagePath = null),
-                    enabled: !app.isAnalyzing,
-                  ),
-                  const SizedBox(height: 14),
-                ],
-                TextField(
-                  controller: symptoms,
-                  minLines: 4,
-                  maxLines: 7,
-                  decoration: const InputDecoration(
-                    labelText: 'Symptoms description',
-                    hintText: 'Tell us what you notice, when it began, and whether it is getting worse.',
-                    alignLabelWithHint: true,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                PrimaryButton(
-                  label: app.isOnline
-                      ? 'Analyze with Server AI'
-                      : 'Analyze On Device',
-                  icon: app.isOnline
-                      ? Icons.cloud_outlined
-                      : Icons.offline_bolt,
-                  onPressed: app.isAnalyzing ? null : _analyze,
-                ),
-                const SizedBox(height: 8),
-                Center(
-                  child: TextButton(
-                    onPressed: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const AssessmentQuestionsScreen(),
-                      ),
-                    ),
-                    child: const Text('Answer follow-up questions'),
-                  ),
-                ),
-              ],
-              const SizedBox(height: 16),
-            ],
+          const Text(
+            'How can we help you today?',
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
           ),
+          const Text(
+            'Describe your symptoms with text, voice, or image',
+            style: TextStyle(color: AppColors.muted),
+          ),
+          const SizedBox(height: 16),
+          _ModelStatus(
+            state: app.modelState,
+            isOnline: app.isOnline,
+            onInitialize: () =>
+                app.llmService.initialize(autoDownload: true),
+          ),
+          const SizedBox(height: 18),
+          // Image upload section
+          ImageInputPreview(
+            selectedImagePath: imagePath,
+            onImageSelected: (path) => setState(() => imagePath = path),
+            onImageRemoved: () => setState(() => imagePath = null),
+            enabled: !app.isAnalyzing,
+          ),
+          const SizedBox(height: 14),
+          // Text input with voice button
+          TextField(
+            controller: symptoms,
+            minLines: 4,
+            maxLines: 7,
+            decoration: InputDecoration(
+              labelText: 'Symptoms description',
+              hintText: 'Type or tap the microphone to speak',
+              alignLabelWithHint: true,
+              suffixIcon: Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: _sttState.isTranscribing
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : IconButton(
+                        icon: Icon(
+                          _sttState.isRecording ? Icons.stop : Icons.mic,
+                          color: _sttState.isRecording 
+                              ? Colors.red 
+                              : AppColors.primary,
+                        ),
+                        onPressed: _toggleVoiceInput,
+                        tooltip: _sttState.isRecording 
+                            ? 'Stop recording' 
+                            : 'Start voice input',
+                      ),
+              ),
+            ),
+          ),
+          if (_sttState.isRecording || _sttState.isTranscribing) ...[
+            const SizedBox(height: 8),
+            Text(
+              _sttState.message,
+              style: TextStyle(
+                fontSize: 12,
+                color: _sttState.hasError 
+                    ? Colors.red 
+                    : AppColors.muted,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+          const SizedBox(height: 16),
+          PrimaryButton(
+            label: app.isOnline
+                ? 'Analyze with Server AI'
+                : 'Analyze On Device',
+            icon: app.isOnline
+                ? Icons.cloud_outlined
+                : Icons.offline_bolt,
+            onPressed: app.isAnalyzing ? null : _analyze,
+          ),
+          const SizedBox(height: 8),
+          Center(
+            child: TextButton(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const AssessmentQuestionsScreen(),
+                ),
+              ),
+              child: const Text('Answer follow-up questions'),
+            ),
+          ),
+          const SizedBox(height: 16),
         ],
       ),
     );
   }
-}
-
-class _VoicePanel extends StatelessWidget {
-  const _VoicePanel({
-    required this.state,
-    required this.onMicrophonePressed,
-    required this.onUseText,
-  });
-  final SttEngineState state;
-  final VoidCallback? onMicrophonePressed;
-  final VoidCallback onUseText;
-
-  @override
-  Widget build(BuildContext context) => SectionCard(
-    child: Column(
-      children: [
-        Material(
-          color: state.isRecording
-              ? Theme.of(context).colorScheme.errorContainer
-              : AppColors.mint,
-          shape: const CircleBorder(),
-          child: InkWell(
-            customBorder: const CircleBorder(),
-            onTap: onMicrophonePressed,
-            child: SizedBox(
-              width: 112,
-              height: 112,
-              child: state.isTranscribing
-                  ? const Padding(
-                      padding: EdgeInsets.all(38),
-                      child: CircularProgressIndicator(strokeWidth: 3),
-                    )
-                  : Icon(
-                      state.isRecording ? Icons.stop_rounded : Icons.mic,
-                      size: 56,
-                      color: state.isRecording
-                          ? Theme.of(context).colorScheme.error
-                          : AppColors.primary,
-                    ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 18),
-        Text(
-          state.isRecording
-              ? 'Recording'
-              : state.isTranscribing
-              ? 'Transcribing with Sarvam'
-              : 'Describe your symptoms',
-          style: const TextStyle(fontWeight: FontWeight.w700),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          state.message,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: state.hasError
-                ? Theme.of(context).colorScheme.error
-                : AppColors.muted,
-          ),
-        ),
-        const SizedBox(height: 14),
-        OutlinedButton.icon(
-          onPressed: onUseText,
-          icon: const Icon(Icons.keyboard),
-          label: const Text('Use Text Instead'),
-        ),
-      ],
-    ),
-  );
 }
 
 class _ModelStatus extends StatelessWidget {
@@ -397,7 +304,7 @@ class _ModelStatus extends StatelessWidget {
                   isOnline
                       ? 'Server AI • Higher accuracy'
                       : 'Offline AI • On-device analysis',
-                  style: TextStyle(fontWeight: FontWeight.w700),
+                  style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
                 Text(
                   isOnline
