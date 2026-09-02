@@ -7,10 +7,7 @@ import '../services/llm_service.dart';
 import '../widgets/image_input_preview.dart';
 
 class LlmScreen extends StatefulWidget {
-  const LlmScreen({
-    this.llmService,
-    super.key,
-  });
+  const LlmScreen({this.llmService, super.key});
 
   final LLMService? llmService;
 
@@ -24,8 +21,9 @@ class _LlmScreenState extends State<LlmScreen> {
 
   String? _selectedImagePath;
   String _responseBuffer = '';
-  LlmEngineState _engineState =
-      const LlmEngineState(status: LlmEngineStatus.uninitialized);
+  LlmEngineState _engineState = const LlmEngineState(
+    status: LlmEngineStatus.uninitialized,
+  );
 
   StreamSubscription<LlmEngineState>? _stateSubscription;
   StreamSubscription<String>? _tokenSubscription;
@@ -82,30 +80,30 @@ class _LlmScreenState extends State<LlmScreen> {
     _tokenSubscription?.cancel();
     _tokenSubscription = _llmService
         .generateStreaming(
-      prompt: text.isEmpty
-          ? 'Analyze the attached medical image and describe findings.'
-          : text,
-      imagePath: _selectedImagePath,
-    )
+          prompt: text.isEmpty
+              ? 'Analyze the attached medical image and describe findings.'
+              : text,
+          imagePath: _selectedImagePath,
+        )
         .listen(
-      (token) {
-        if (mounted) {
-          setState(() {
-            _responseBuffer += token;
-          });
-        }
-      },
-      onError: (Object error) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Inference error: $error'),
-              backgroundColor: Theme.of(context).colorScheme.error,
-            ),
-          );
-        }
-      },
-    );
+          (token) {
+            if (mounted) {
+              setState(() {
+                _responseBuffer += token;
+              });
+            }
+          },
+          onError: (Object error) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Inference error: $error'),
+                  backgroundColor: Theme.of(context).colorScheme.error,
+                ),
+              );
+            }
+          },
+        );
   }
 
   Future<void> _stopGeneration() async {
@@ -187,11 +185,11 @@ class _LlmScreenState extends State<LlmScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    onPressed: isGenerating
-                        ? _stopGeneration
-                        : _submitPrompt,
+                    onPressed: isGenerating ? _stopGeneration : _submitPrompt,
                     icon: Icon(
-                      isGenerating ? Icons.stop_rounded : Icons.psychology_rounded,
+                      isGenerating
+                          ? Icons.stop_rounded
+                          : Icons.psychology_rounded,
                     ),
                     label: Text(
                       isGenerating ? 'Stop Generation' : 'Submit',
@@ -220,7 +218,11 @@ class _LlmScreenState extends State<LlmScreen> {
         ),
         child: Row(
           children: [
-            Icon(Icons.check_circle_rounded, color: colorScheme.primary, size: 20),
+            Icon(
+              Icons.check_circle_rounded,
+              color: colorScheme.primary,
+              size: 20,
+            ),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
@@ -262,14 +264,18 @@ class _LlmScreenState extends State<LlmScreen> {
                   Expanded(
                     child: Text(
                       'Downloading SmolVLM2 Weights ($percentage%)',
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 8),
               Text(
-                _engineState.message ?? 'Downloading model weights from HuggingFace...',
+                _engineState.message ??
+                    'Downloading model weights from HuggingFace...',
                 style: TextStyle(
                   color: colorScheme.onSurfaceVariant,
                   fontSize: 12,
@@ -342,7 +348,9 @@ class _LlmScreenState extends State<LlmScreen> {
               ),
               const SizedBox(height: 6),
               Text(
-                _engineState.error ?? _engineState.message ?? 'An unknown error occurred.',
+                _engineState.error ??
+                    _engineState.message ??
+                    'An unknown error occurred.',
                 style: TextStyle(color: colorScheme.onSurface, fontSize: 13),
               ),
               const SizedBox(height: 10),
@@ -384,9 +392,8 @@ class _LlmScreenState extends State<LlmScreen> {
           children: [
             Text(
               'Model Response',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+              style: Theme.of(context).textTheme.titleMedium
+                  ?.copyWith(fontWeight: FontWeight.bold),
             ),
             if (_engineState.isGenerating)
               Row(
@@ -399,10 +406,7 @@ class _LlmScreenState extends State<LlmScreen> {
                   const SizedBox(width: 6),
                   Text(
                     'Streaming...',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: colorScheme.primary,
-                    ),
+                    style: TextStyle(fontSize: 12, color: colorScheme.primary),
                   ),
                 ],
               ),
@@ -421,9 +425,8 @@ class _LlmScreenState extends State<LlmScreen> {
           child: _responseBuffer.isNotEmpty
               ? SelectableText(
                   _responseBuffer,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        height: 1.5,
-                      ),
+                  style: Theme.of(context).textTheme.bodyMedium
+                      ?.copyWith(height: 1.5),
                 )
               : Center(
                   child: Padding(
@@ -434,7 +437,9 @@ class _LlmScreenState extends State<LlmScreen> {
                           : 'Inference results will appear here after submission.',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                        color: colorScheme.onSurfaceVariant.withValues(
+                          alpha: 0.7,
+                        ),
                         fontStyle: FontStyle.italic,
                       ),
                     ),

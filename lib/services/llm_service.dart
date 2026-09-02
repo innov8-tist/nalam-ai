@@ -12,9 +12,9 @@ class LLMService {
     ModelManager? modelManager,
     BaseLlmEngine? engine,
     SmolVlm2Formatter? formatter,
-  })  : _modelManager = modelManager ?? ModelManager(),
-        _engine = engine ?? SmolVlm2LocalEngine(),
-        _formatter = formatter ?? const SmolVlm2Formatter() {
+  }) : _modelManager = modelManager ?? ModelManager(),
+       _engine = engine ?? SmolVlm2LocalEngine(),
+       _formatter = formatter ?? const SmolVlm2Formatter() {
     _engineSubscription = _engine.stateStream.listen((engineState) {
       _currentState = engineState;
       if (!_stateController.isClosed) {
@@ -31,8 +31,9 @@ class LLMService {
       StreamController<LlmEngineState>.broadcast();
   StreamSubscription<LlmEngineState>? _engineSubscription;
 
-  LlmEngineState _currentState =
-      const LlmEngineState(status: LlmEngineStatus.uninitialized);
+  LlmEngineState _currentState = const LlmEngineState(
+    status: LlmEngineStatus.uninitialized,
+  );
 
   Stream<LlmEngineState> get stateStream => _stateController.stream;
   LlmEngineState get currentState => _currentState;
@@ -68,8 +69,7 @@ class LLMService {
             _currentState.copyWith(
               status: LlmEngineStatus.error,
               message: 'Model weights not found on device',
-              error:
-                  'SmolVLM2 weights not found in local storage. Tap "Download Model" to download weights once for offline on-device inference.',
+              error: 'SmolVLM2 weights not found in local storage. Tap "Download Model" to download weights once for offline on-device inference.',
             ),
           );
           return;
@@ -117,28 +117,29 @@ class LLMService {
 
     try {
       final files = await _modelManager.downloadModelIfNeeded(
-        onProgress: ({
-          required String fileName,
-          required int bytesReceived,
-          required int totalBytes,
-          required double progressFraction,
-          required String message,
-        }) {
-          _updateState(
-            _currentState.copyWith(
-              status: LlmEngineStatus.downloading,
-              downloadProgress: progressFraction,
-              message: message,
-            ),
-          );
-          onProgress?.call(
-            fileName: fileName,
-            bytesReceived: bytesReceived,
-            totalBytes: totalBytes,
-            progressFraction: progressFraction,
-            message: message,
-          );
-        },
+        onProgress:
+            ({
+              required String fileName,
+              required int bytesReceived,
+              required int totalBytes,
+              required double progressFraction,
+              required String message,
+            }) {
+              _updateState(
+                _currentState.copyWith(
+                  status: LlmEngineStatus.downloading,
+                  downloadProgress: progressFraction,
+                  message: message,
+                ),
+              );
+              onProgress?.call(
+                fileName: fileName,
+                bytesReceived: bytesReceived,
+                totalBytes: totalBytes,
+                progressFraction: progressFraction,
+                message: message,
+              );
+            },
       );
 
       _updateState(

@@ -13,11 +13,14 @@ class SmolVlmConfig {
   const SmolVlmConfig({
     this.apiUrl,
     this.modelName = 'SmolVLM2-500M-Video-Instruct-Q8_0',
-    this.nCtx = 2048,
+    // Leave enough room for image tokens, the triage schema, and a complete
+    // response. At 2048 tokens, vision requests commonly ended mid-JSON.
+    this.nCtx = 4096,
     this.temperature = 0.2,
     this.topP = 0.9,
     this.maxTokens = 512,
     this.systemPrompt,
+    this.responseFormat,
     this.timeout = const Duration(seconds: 120),
   });
 
@@ -28,6 +31,7 @@ class SmolVlmConfig {
   final double topP;
   final int maxTokens;
   final String? systemPrompt;
+  final Map<String, dynamic>? responseFormat;
   final Duration timeout;
 }
 
@@ -70,8 +74,8 @@ class SmolVlm2Engine implements BaseLlmEngine {
     SmolVlm2Formatter? formatter,
     http.Client? httpClient,
     this.defaultApiUrl,
-  })  : _formatter = formatter ?? const SmolVlm2Formatter(),
-        _httpClient = httpClient ?? http.Client();
+  }) : _formatter = formatter ?? const SmolVlm2Formatter(),
+       _httpClient = httpClient ?? http.Client();
 
   final SmolVlm2Formatter _formatter;
   final http.Client _httpClient;
@@ -82,8 +86,9 @@ class SmolVlm2Engine implements BaseLlmEngine {
   final StreamController<String> _tokenController =
       StreamController<String>.broadcast();
 
-  LlmEngineState _currentState =
-      const LlmEngineState(status: LlmEngineStatus.uninitialized);
+  LlmEngineState _currentState = const LlmEngineState(
+    status: LlmEngineStatus.uninitialized,
+  );
 
   Completer<String>? _generationCompleter;
   StringBuffer _currentGenerationBuffer = StringBuffer();
@@ -105,7 +110,8 @@ class SmolVlm2Engine implements BaseLlmEngine {
 
   /// Resolves the appropriate model API endpoint.
   Uri _resolveApiUri(String? explicitUrl) {
-    final rawUrl = explicitUrl ?? defaultApiUrl ?? AppConstants.smolVlmDefaultApiUrl;
+    final rawUrl =
+        explicitUrl ?? defaultApiUrl ?? AppConstants.smolVlmDefaultApiUrl;
     return Uri.parse(rawUrl.trim());
   }
 
@@ -153,7 +159,10 @@ class SmolVlm2Engine implements BaseLlmEngine {
     }
 
     if (imagePath != null && !File(imagePath).existsSync()) {
-      throw FileSystemException('Selected image file does not exist', imagePath);
+      throw FileSystemException(
+        'Selected image file does not exist',
+        imagePath,
+      );
     }
 
     _currentGenerationBuffer = StringBuffer();
@@ -167,11 +176,7 @@ class SmolVlm2Engine implements BaseLlmEngine {
       ),
     );
 
-    _executeApiRequest(
-      prompt: prompt,
-      imagePath: imagePath,
-      config: config,
-    );
+    _executeApiRequest(prompt: prompt, imagePath: imagePath, config: config);
 
     return _tokenController.stream;
   }
@@ -197,12 +202,10 @@ class SmolVlm2Engine implements BaseLlmEngine {
       // 1. Prepare chat messages with optional multimodal image
       final messages = <Map<String, dynamic>>[];
 
-      final effectiveSystem = config.systemPrompt ?? _formatter.defaultSystemPrompt;
+      final effectiveSystem =
+          config.systemPrompt ?? _formatter.defaultSystemPrompt;
       if (effectiveSystem.trim().isNotEmpty) {
-        messages.add({
-          'role': 'system',
-          'content': effectiveSystem.trim(),
-        });
+        messages.add({'role': 'system', 'content': effectiveSystem.trim()});
       }
 
       if (imagePath != null && File(imagePath).existsSync()) {
@@ -216,17 +219,12 @@ class SmolVlm2Engine implements BaseLlmEngine {
             {'type': 'text', 'text': prompt},
             {
               'type': 'image_url',
-              'image_url': {
-                'url': 'data:$mimeType;base64,$base64String',
-              },
+              'image_url': {'url': 'data:$mimeType;base64,$base64String'},
             },
           ],
         });
       } else {
-        messages.add({
-          'role': 'user',
-          'content': prompt,
-        });
+        messages.add({'role': 'user', 'content': prompt});
       }
 
       // 2. Build request payload
@@ -237,6 +235,8 @@ class SmolVlm2Engine implements BaseLlmEngine {
         'top_p': config.topP,
         'max_tokens': config.maxTokens,
         'stream': true,
+        if (config.responseFormat != null)
+          'response_format': config.responseFormat,
       });
 
       final request = http.Request('POST', endpoint)
@@ -247,7 +247,9 @@ class SmolVlm2Engine implements BaseLlmEngine {
         ..body = requestBody;
 
       // 3. Send streaming HTTP request
-      final streamedResponse = await client.send(request).timeout(config.timeout);
+      final streamedResponse = await client
+          .send(request)
+          .timeout(config.timeout);
 
       if (streamedResponse.statusCode != 200) {
         final errorBytes = await streamedResponse.stream.toBytes();
@@ -260,7 +262,9 @@ class SmolVlm2Engine implements BaseLlmEngine {
 
       // 4. Stream response tokens in real-time
       var buffer = '';
-      await for (final chunk in streamedResponse.stream.transform(utf8.decoder)) {
+      await for (final chunk in streamedResponse.stream.transform(
+        utf8.decoder,
+      )) {
         buffer += chunk;
 
         final lines = buffer.split('\n');
@@ -285,7 +289,8 @@ class SmolVlm2Engine implements BaseLlmEngine {
                 if (decoded.containsKey('choices') &&
                     decoded['choices'] is List &&
                     (decoded['choices'] as List).isNotEmpty) {
-                  final firstChoice = decoded['choices'][0] as Map<String, dynamic>;
+                  final firstChoice =
+                      decoded['choices'][0] as Map<String, dynamic>;
 
                   if (firstChoice.containsKey('delta') &&
                       firstChoice['delta'] is Map<String, dynamic>) {
@@ -294,7 +299,8 @@ class SmolVlm2Engine implements BaseLlmEngine {
                   } else if (firstChoice.containsKey('text')) {
                     token = firstChoice['text'] as String?;
                   } else if (firstChoice.containsKey('message')) {
-                    final message = firstChoice['message'] as Map<String, dynamic>?;
+                    final message =
+                        firstChoice['message'] as Map<String, dynamic>?;
                     token = message?['content'] as String?;
                   }
                 } else if (decoded.containsKey('content')) {
@@ -323,7 +329,8 @@ class SmolVlm2Engine implements BaseLlmEngine {
             // Handle plain non-SSE stream chunks
             try {
               final decoded = jsonDecode(line);
-              if (decoded is Map<String, dynamic> && decoded.containsKey('response')) {
+              if (decoded is Map<String, dynamic> &&
+                  decoded.containsKey('response')) {
                 final token = decoded['response'] as String?;
                 if (token != null && token.isNotEmpty) {
                   _currentGenerationBuffer.write(token);
@@ -343,7 +350,8 @@ class SmolVlm2Engine implements BaseLlmEngine {
         if (dataContent != '[DONE]') {
           try {
             final decoded = jsonDecode(dataContent);
-            if (decoded is Map<String, dynamic> && decoded.containsKey('content')) {
+            if (decoded is Map<String, dynamic> &&
+                decoded.containsKey('content')) {
               final token = decoded['content'] as String?;
               if (token != null && token.isNotEmpty) {
                 _currentGenerationBuffer.write(token);
@@ -356,7 +364,9 @@ class SmolVlm2Engine implements BaseLlmEngine {
         }
       }
 
-      final fullOutput = _formatter.cleanOutput(_currentGenerationBuffer.toString());
+      final fullOutput = _formatter.cleanOutput(
+        _currentGenerationBuffer.toString(),
+      );
 
       _updateState(
         _currentState.copyWith(
@@ -370,7 +380,9 @@ class SmolVlm2Engine implements BaseLlmEngine {
       }
     } catch (e) {
       String errorMessage = e.toString();
-      if (e is SocketException || (e is http.ClientException && e.message.contains('SocketException'))) {
+      if (e is SocketException ||
+          (e is http.ClientException &&
+              e.message.contains('SocketException'))) {
         errorMessage =
             'Cannot connect to SmolVLM model server at $endpoint. Ensure your model server is running (e.g., llama-server or ollama). On physical Android via USB, run "adb reverse tcp:8080 tcp:8080", or set your PC\'s Wi-Fi IP in settings.';
       } else if (e is TimeoutException) {

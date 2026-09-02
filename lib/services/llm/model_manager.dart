@@ -62,7 +62,9 @@ class ModelManager {
     } catch (_) {
       // Fallback if path_provider plugin has not been compiled into native build yet
       if (Platform.isAndroid) {
-        final candidate = Directory('/data/data/com.example.nalam_ai/app_flutter');
+        final candidate = Directory(
+          '/data/data/com.example.nalam_ai/app_flutter',
+        );
         if (candidate.existsSync()) {
           basePath = candidate.path;
         } else {
@@ -113,7 +115,8 @@ class ModelManager {
   Future<ModelFiles> getModelFiles() async {
     final modelPath = await getModelPath();
     final mmprojPath = await getMmprojPath();
-    final isVision = File(mmprojPath).existsSync() && File(mmprojPath).lengthSync() > 0;
+    final isVision =
+        File(mmprojPath).existsSync() && File(mmprojPath).lengthSync() > 0;
 
     return ModelFiles(
       modelPath: modelPath,
@@ -203,7 +206,9 @@ class ModelManager {
       request.followRedirects = false;
       final res = await _httpClient.send(request);
 
-      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.containsKey('location')) {
+      if (res.statusCode >= 300 &&
+          res.statusCode < 400 &&
+          res.headers.containsKey('location')) {
         final location = res.headers['location']!;
         currentUri = Uri.parse(location);
         continue;
@@ -213,7 +218,9 @@ class ModelManager {
       break;
     }
 
-    if (response == null || response.statusCode < 200 || response.statusCode >= 300) {
+    if (response == null ||
+        response.statusCode < 200 ||
+        response.statusCode >= 300) {
       final status = response?.statusCode ?? 0;
       throw HttpException(
         'Failed to download $fileName: HTTP status $status from $currentUri',
@@ -236,8 +243,9 @@ class ModelManager {
         if (now.difference(lastProgressUpdate).inMilliseconds >= 100 ||
             (totalBytes > 0 && receivedBytes >= totalBytes)) {
           lastProgressUpdate = now;
-          final fraction =
-              totalBytes > 0 ? (receivedBytes / totalBytes).clamp(0.0, 1.0) : 0.0;
+          final fraction = totalBytes > 0
+              ? (receivedBytes / totalBytes).clamp(0.0, 1.0)
+              : 0.0;
           final receivedMb = (receivedBytes / (1024 * 1024)).toStringAsFixed(1);
           final totalMb = totalBytes > 0
               ? '${(totalBytes / (1024 * 1024)).toStringAsFixed(1)} MB'

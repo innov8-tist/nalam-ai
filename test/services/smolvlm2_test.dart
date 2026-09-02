@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nalam_ai/models/llm_state.dart';
 import 'package:nalam_ai/services/llm/model_manager.dart';
@@ -8,7 +9,9 @@ import 'package:nalam_ai/services/llm_service.dart';
 
 class FakeLlmEngine implements BaseLlmEngine {
   final _stateController = StreamController<LlmEngineState>.broadcast();
-  var _currentState = const LlmEngineState(status: LlmEngineStatus.uninitialized);
+  var _currentState = const LlmEngineState(
+    status: LlmEngineStatus.uninitialized,
+  );
 
   @override
   LlmEngineState get currentState => _currentState;
@@ -72,7 +75,9 @@ class FakeLlmEngine implements BaseLlmEngine {
 
 void main() {
   group('SmolVlm2Formatter', () {
-    const formatter = SmolVlm2Formatter(defaultSystemPrompt: 'System prompt test.');
+    const formatter = SmolVlm2Formatter(
+      defaultSystemPrompt: 'System prompt test.',
+    );
 
     test('formats text-only prompt in ChatML format', () {
       final prompt = formatter.formatPrompt(
@@ -80,8 +85,14 @@ void main() {
         hasImage: false,
       );
 
-      expect(prompt, contains('<|im_start|>system\nSystem prompt test.<|im_end|>\n'));
-      expect(prompt, contains('<|im_start|>user\nI have a mild headache.<|im_end|>\n'));
+      expect(
+        prompt,
+        contains('<|im_start|>system\nSystem prompt test.<|im_end|>\n'),
+      );
+      expect(
+        prompt,
+        contains('<|im_start|>user\nI have a mild headache.<|im_end|>\n'),
+      );
       expect(prompt, contains('<|im_start|>assistant\n'));
       expect(prompt, isNot(contains('<image>')));
     });
@@ -92,14 +103,25 @@ void main() {
         hasImage: true,
       );
 
-      expect(prompt, contains('<|im_start|>user\n<image>\nWhat does this skin rash look like?<|im_end|>\n'));
+      expect(
+        prompt,
+        contains(
+          '<|im_start|>user\n<image>\nWhat does this skin rash look like?<|im_end|>\n',
+        ),
+      );
       expect(prompt, contains('<|im_start|>assistant\n'));
     });
 
     test('cleanOutput removes trailing stop tokens', () {
       expect(formatter.cleanOutput('Hello world<|im_end|>'), 'Hello world');
-      expect(formatter.cleanOutput('Hello world<end_of_utterance>'), 'Hello world');
-      expect(formatter.cleanOutput('Hello world<|end_of_text|>'), 'Hello world');
+      expect(
+        formatter.cleanOutput('Hello world<end_of_utterance>'),
+        'Hello world',
+      );
+      expect(
+        formatter.cleanOutput('Hello world<|end_of_text|>'),
+        'Hello world',
+      );
     });
   });
 
@@ -116,7 +138,10 @@ void main() {
       expect(genState.isGenerating, isTrue);
       expect(genState.isBusy, isTrue);
 
-      const errState = LlmEngineState(status: LlmEngineStatus.error, error: 'OOM');
+      const errState = LlmEngineState(
+        status: LlmEngineStatus.error,
+        error: 'OOM',
+      );
       expect(errState.hasError, isTrue);
       expect(errState.error, 'OOM');
     });
@@ -166,15 +191,18 @@ void main() {
   group('LLMService Integration', () {
     test('initialize and stream generation', () async {
       final fakeEngine = FakeLlmEngine();
-      final service = LLMService(
-        engine: fakeEngine,
-      );
+      final service = LLMService(engine: fakeEngine);
 
-      await fakeEngine.initialize(modelPath: 'test.gguf', mmprojPath: 'mmproj.gguf');
+      await fakeEngine.initialize(
+        modelPath: 'test.gguf',
+        mmprojPath: 'mmproj.gguf',
+      );
       expect(service.currentState.isReady, isTrue);
 
       final tokens = <String>[];
-      await for (final token in service.generateStreaming(prompt: 'Fever and cough')) {
+      await for (final token in service.generateStreaming(
+        prompt: 'Fever and cough',
+      )) {
         tokens.add(token);
       }
 

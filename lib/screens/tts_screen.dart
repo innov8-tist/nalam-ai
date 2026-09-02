@@ -4,10 +4,7 @@ import '../models/tts_state.dart';
 import '../services/tts_service.dart';
 
 class TtsScreen extends StatefulWidget {
-  const TtsScreen({
-    this.ttsService,
-    super.key,
-  });
+  const TtsScreen({this.ttsService, super.key});
 
   final TTSService? ttsService;
 
@@ -23,8 +20,9 @@ class _TtsScreenState extends State<TtsScreen> {
   bool _isSpeaking = false;
   double _speechRate = 0.5;
   double _pitch = 1.0;
-  TtsEngineState _engineState =
-      const TtsEngineState(status: TtsEngineStatus.uninitialized);
+  TtsEngineState _engineState = const TtsEngineState(
+    status: TtsEngineStatus.uninitialized,
+  );
 
   final Map<String, String> _languages = {
     'en-US': 'English',
@@ -129,10 +127,7 @@ class _TtsScreenState extends State<TtsScreen> {
 
   void _showSnackbar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        duration: const Duration(seconds: 3),
-      ),
+      SnackBar(content: Text(message), duration: const Duration(seconds: 3)),
     );
   }
 
@@ -147,7 +142,11 @@ class _TtsScreenState extends State<TtsScreen> {
         ),
         child: Row(
           children: [
-            Icon(Icons.check_circle_rounded, color: colorScheme.primary, size: 20),
+            Icon(
+              Icons.check_circle_rounded,
+              color: colorScheme.primary,
+              size: 20,
+            ),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
@@ -185,10 +184,7 @@ class _TtsScreenState extends State<TtsScreen> {
               const SizedBox(height: 12),
               ClipRRect(
                 borderRadius: BorderRadius.circular(8),
-                child: LinearProgressIndicator(
-                  value: progress,
-                  minHeight: 8,
-                ),
+                child: LinearProgressIndicator(value: progress, minHeight: 8),
               ),
               const SizedBox(height: 8),
               Text(
@@ -232,9 +228,7 @@ class _TtsScreenState extends State<TtsScreen> {
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerHigh,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: colorScheme.outline.withValues(alpha: 0.2),
-        ),
+        border: Border.all(color: colorScheme.outline.withValues(alpha: 0.2)),
       ),
       child: Row(
         children: [
@@ -259,16 +253,12 @@ class _TtsScreenState extends State<TtsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Download Models',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
+        Text('Download Models', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
         Text(
           'Download high-quality TTS models for natural-sounding voices.',
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: colorScheme.onSurface.withValues(alpha: 0.7),
-              ),
+          style: Theme.of(context).textTheme.bodySmall
+              ?.copyWith(color: colorScheme.onSurface.withValues(alpha: 0.7)),
         ),
         const SizedBox(height: 12),
         Row(
@@ -284,7 +274,9 @@ class _TtsScreenState extends State<TtsScreen> {
                 onPressed: _engineState.isBusy
                     ? null
                     : () => _downloadModel('en-US'),
-                icon: Icon(_engineState.isBusy ? Icons.hourglass_top : Icons.download),
+                icon: Icon(
+                  _engineState.isBusy ? Icons.hourglass_top : Icons.download,
+                ),
                 label: const Text('English'),
               ),
             ),
@@ -300,7 +292,9 @@ class _TtsScreenState extends State<TtsScreen> {
                 onPressed: _engineState.isBusy
                     ? null
                     : () => _downloadModel('ml-IN'),
-                icon: Icon(_engineState.isBusy ? Icons.hourglass_top : Icons.download),
+                icon: Icon(
+                  _engineState.isBusy ? Icons.hourglass_top : Icons.download,
+                ),
                 label: const Text('Malayalam'),
               ),
             ),
@@ -323,10 +317,7 @@ class _TtsScreenState extends State<TtsScreen> {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Natural Text-to-Speech'),
-        elevation: 0,
-      ),
+      appBar: AppBar(title: const Text('Natural Text-to-Speech'), elevation: 0),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
@@ -341,10 +332,7 @@ class _TtsScreenState extends State<TtsScreen> {
               _buildDownloadButtons(colorScheme),
 
               // Language Selection
-              Text(
-                'Language',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
+              Text('Language', style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 8),
               Container(
                 decoration: BoxDecoration(
@@ -416,7 +404,8 @@ class _TtsScreenState extends State<TtsScreen> {
                       max: 1.0,
                       divisions: 10,
                       label: '${(_speechRate * 100).toStringAsFixed(0)}%',
-                      onChanged: _engineState.status == TtsEngineStatus.downloading
+                      onChanged:
+                          _engineState.status == TtsEngineStatus.downloading
                           ? null
                           : _updateSpeechRate,
                     ),
@@ -433,10 +422,7 @@ class _TtsScreenState extends State<TtsScreen> {
               const SizedBox(height: 16),
 
               // Pitch Control
-              Text(
-                'Pitch',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
+              Text('Pitch', style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 8),
               Row(
                 children: [
@@ -447,7 +433,8 @@ class _TtsScreenState extends State<TtsScreen> {
                       max: 2.0,
                       divisions: 15,
                       label: _pitch.toStringAsFixed(1),
-                      onChanged: _engineState.status == TtsEngineStatus.downloading
+                      onChanged:
+                          _engineState.status == TtsEngineStatus.downloading
                           ? null
                           : _updatePitch,
                     ),
@@ -479,7 +466,9 @@ class _TtsScreenState extends State<TtsScreen> {
                       ),
                       onPressed: _isSpeaking ? _stop : _speak,
                       icon: Icon(
-                        _isSpeaking ? Icons.stop_rounded : Icons.volume_up_rounded,
+                        _isSpeaking
+                            ? Icons.stop_rounded
+                            : Icons.volume_up_rounded,
                       ),
                       label: Text(
                         _isSpeaking ? 'Stop Speaking' : 'Speak',
