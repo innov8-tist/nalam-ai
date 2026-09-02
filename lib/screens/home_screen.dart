@@ -4,6 +4,7 @@ import '../core/constants.dart';
 import '../widgets/feature_button.dart';
 import '../widgets/workspace_panel.dart';
 import 'llm_screen.dart';
+import 'tts_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -26,6 +27,15 @@ class _HomeScreenState extends State<HomeScreen> {
       context,
       MaterialPageRoute<void>(
         builder: (context) => const LlmScreen(),
+      ),
+    );
+  }
+
+  void _openTtsScreen() {
+    Navigator.push(
+      context,
+      MaterialPageRoute<void>(
+        builder: (context) => const TtsScreen(),
       ),
     );
   }
@@ -56,7 +66,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         FeatureButton(
                           label: 'TTS',
                           icon: Icons.volume_up_rounded,
-                          onPressed: () => _selectModule('TTS'),
+                          onPressed: _openTtsScreen,
                         ),
                         FeatureButton(
                           label: 'STT',

@@ -21,4 +21,19 @@ abstract final class AppConstants {
   static const String imStartToken = '<|im_start|>';
   static const String imEndToken = '<|im_end|>';
   static const String imageToken = '<image>';
+
+  // Piper TTS Models
+  static const String piperModelsDir = 'models/piper';
+  static const String piperEnglishModel = 'en_US-libritts-high';
+  static const String piperMalayalamModel = 'ml_IN-google-high';
+
+  // Piper TTS Model Download URLs (from Piper releases)
+  static const String piperEnglishModelUrl =
+      'https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/libritts/high/en_US-libritts-high.onnx';
+  static const String piperEnglishModelJsonUrl =
+      'https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/libritts/high/en_US-libritts-high.onnx.json';
+  static const String piperMalayalamModelUrl =
+      'https://huggingface.co/rhasspy/piper-voices/resolve/main/ml/ml_IN/google/high/ml_IN-google-high.onnx';
+  static const String piperMalayalamModelJsonUrl =
+      'https://huggingface.co/rhasspy/piper-voices/resolve/main/ml/ml_IN/google/high/ml_IN-google-high.onnx.json';
 }
