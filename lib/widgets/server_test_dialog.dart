@@ -4,9 +4,20 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 class ServerTestDialog extends StatefulWidget {
+<<<<<<< HEAD
   const ServerTestDialog({required this.serverUri, super.key});
 
   final Uri serverUri;
+=======
+  final String? primaryUrl;
+  final String? fallbackUrl;
+
+  const ServerTestDialog({
+    super.key,
+    this.primaryUrl,
+    this.fallbackUrl,
+  });
+>>>>>>> 68255cdb27864337510dfc537594c67fcca33991
 
   @override
   State<ServerTestDialog> createState() => _ServerTestDialogState();
@@ -14,17 +25,21 @@ class ServerTestDialog extends StatefulWidget {
 
 class _ServerTestDialogState extends State<ServerTestDialog> {
   String _aiServiceStatus = 'Testing...';
+  String _fallbackServiceStatus = 'Testing...';
   String _smolVlmStatus = 'Testing...';
   bool _isTestingAi = true;
+  bool _isTestingFallback = false;
   bool _isTestingVlm = true;
 
   @override
   void initState() {
     super.initState();
+    _isTestingFallback = widget.fallbackUrl != null && widget.fallbackUrl!.isNotEmpty;
     _testConnections();
   }
 
   Future<void> _testConnections() async {
+<<<<<<< HEAD
     final aiHealthUri = widget.serverUri.replace(
       path: '/health',
       query: null,
@@ -39,6 +54,14 @@ class _ServerTestDialogState extends State<ServerTestDialog> {
 
     _testEndpoint(
       aiHealthUri,
+=======
+    final primaryBase = widget.primaryUrl ?? 'http://10.128.184.195:8000';
+    final primaryHealth = primaryBase.endsWith('/') ? '${primaryBase}health' : '$primaryBase/health';
+
+    // Test AI Service
+    _testEndpoint(
+      primaryHealth,
+>>>>>>> 68255cdb27864337510dfc537594c67fcca33991
       onResult: (success, message) {
         if (mounted) {
           setState(() {
@@ -49,8 +72,42 @@ class _ServerTestDialogState extends State<ServerTestDialog> {
       },
     );
 
+<<<<<<< HEAD
     _testEndpoint(
       smolVlmHealthUri,
+=======
+    // Test Fallback AI Service
+    if (widget.fallbackUrl != null && widget.fallbackUrl!.isNotEmpty) {
+      final fallbackBase = widget.fallbackUrl!;
+      final fallbackHealth = fallbackBase.endsWith('/') ? '${fallbackBase}health' : '$fallbackBase/health';
+      _testEndpoint(
+        fallbackHealth,
+        onResult: (success, message) {
+          if (mounted) {
+            setState(() {
+              _fallbackServiceStatus = message;
+              _isTestingFallback = false;
+            });
+          }
+        },
+      );
+    }
+
+    // Determine SmolVLM2 URL (port 8080) from primary
+    String smolVlmUrl = 'http://10.128.184.195:8080/health';
+    try {
+      final uri = Uri.parse(primaryBase);
+      if (uri.hasPort && uri.port == 8000) {
+        smolVlmUrl = uri.replace(port: 8080).resolve('health').toString();
+      } else {
+        smolVlmUrl = uri.resolve('health').toString().replaceAll(':${uri.port}', ':8080');
+      }
+    } catch (_) {}
+
+    // Test SmolVLM2 API
+    _testEndpoint(
+      smolVlmUrl,
+>>>>>>> 68255cdb27864337510dfc537594c67fcca33991
       onResult: (success, message) {
         if (mounted) {
           setState(() {
@@ -83,8 +140,10 @@ class _ServerTestDialogState extends State<ServerTestDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final hasFallback = widget.fallbackUrl != null && widget.fallbackUrl!.isNotEmpty;
     return AlertDialog(
       title: const Text('Server Connection Test'),
+<<<<<<< HEAD
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -109,23 +168,74 @@ class _ServerTestDialogState extends State<ServerTestDialog> {
           ),
           const SizedBox(height: 16),
           if (!_isTestingAi && !_isTestingVlm)
+=======
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+>>>>>>> 68255cdb27864337510dfc537594c67fcca33991
             const Text(
-              'Troubleshooting:\n'
-              '• Check laptop server is running\n'
-              '• Verify server binds to 0.0.0.0\n'
-              '• Both devices on same WiFi\n'
-              '• Firewall allows ports 8000, 8080',
-              style: TextStyle(fontSize: 12),
+              'Configured Primary Server:',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
             ),
-        ],
+            Text(
+              widget.primaryUrl ?? 'http://10.128.184.195:8000',
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+            if (hasFallback) ...[
+              const SizedBox(height: 8),
+              const Text(
+                'Configured Fallback Server:',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              ),
+              Text(
+                widget.fallbackUrl!,
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+            ],
+            const SizedBox(height: 16),
+            _buildTestResult(
+              'AI Service (Primary)',
+              _aiServiceStatus,
+              _isTestingAi,
+            ),
+            if (hasFallback) ...[
+              const SizedBox(height: 12),
+              _buildTestResult(
+                'AI Service (Fallback)',
+                _fallbackServiceStatus,
+                _isTestingFallback,
+              ),
+            ],
+            const SizedBox(height: 12),
+            _buildTestResult(
+              'SmolVLM2 API (port 8080)',
+              _smolVlmStatus,
+              _isTestingVlm,
+            ),
+            const SizedBox(height: 16),
+            if (!_isTestingAi && !_isTestingVlm && !_isTestingFallback)
+              const Text(
+                'Troubleshooting:\n'
+                '• Check laptop server is running\n'
+                '• Verify server binds to 0.0.0.0\n'
+                '• Both devices on same WiFi (or fallback setup configured)\n'
+                '• Firewall allows ports 8000, 8080',
+                style: TextStyle(fontSize: 12),
+              ),
+          ],
+        ),
       ),
       actions: [
         TextButton(
           onPressed: () {
             setState(() {
               _isTestingAi = true;
+              _isTestingFallback = hasFallback;
               _isTestingVlm = true;
               _aiServiceStatus = 'Testing...';
+              _fallbackServiceStatus = 'Testing...';
               _smolVlmStatus = 'Testing...';
             });
             _testConnections();

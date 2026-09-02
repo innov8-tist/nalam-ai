@@ -7,15 +7,21 @@ import '../core/constants.dart';
 
 /// Client for the more capable Nalam AI server in `logic/main.py`.
 class RemoteAiService {
-  RemoteAiService({http.Client? client, Uri? baseUri})
+  RemoteAiService({http.Client? client, Uri? baseUri, Uri? fallbackUri})
     : _client = client ?? http.Client(),
       _ownsClient = client == null,
-      _baseUri = baseUri ?? _defaultBaseUri;
+      _baseUri = baseUri ?? _defaultBaseUri,
+      _fallbackUri = fallbackUri ?? _defaultFallbackUri;
 
   final http.Client _client;
   final bool _ownsClient;
   Uri _baseUri;
+  Uri? _fallbackUri;
+  Uri? _activeUri;
+
   Uri get baseUri => _baseUri;
+  Uri? get fallbackUri => _fallbackUri ?? _defaultFallbackUri;
+  Uri get activeBaseUri => _activeUri ?? baseUri;
 
   void setBaseUrl(String value) {
     final parsed = Uri.tryParse(value.trim());
@@ -27,30 +33,86 @@ class RemoteAiService {
       );
     }
     _baseUri = parsed;
+    _activeUri = null;
+  }
+
+  void setFallbackUrl(String value) {
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) {
+      _fallbackUri = null;
+      _activeUri = null;
+      return;
+    }
+    final parsed = Uri.tryParse(trimmed);
+    if (parsed == null ||
+        (parsed.scheme != 'http' && parsed.scheme != 'https') ||
+        parsed.host.isEmpty) {
+      throw const FormatException(
+        'Enter a complete fallback address such as https://xxxx.ngrok-free.app',
+      );
+    }
+    _fallbackUri = parsed;
+    _activeUri = null;
   }
 
   static Uri get _defaultBaseUri {
+<<<<<<< HEAD
     return AppConstants.serverUri;
+=======
+    final configured = AppConstants.remoteApiBaseUrl.trim();
+    return Uri.parse(configured);
+  }
+
+  static Uri? get _defaultFallbackUri {
+    final configured = AppConstants.remoteApiFallbackUrl.trim();
+    if (configured.isNotEmpty) return Uri.parse(configured);
+    return null;
+  }
+
+  Uri _endpointForUri(Uri uri, String path) {
+    final root = uri.toString().endsWith('/')
+        ? uri
+        : Uri.parse('${uri.toString()}/');
+    return root.resolve(path);
+>>>>>>> 68255cdb27864337510dfc537594c67fcca33991
   }
 
   Uri _endpoint(String path) {
-    final root = baseUri.toString().endsWith('/')
-        ? baseUri
-        : Uri.parse('${baseUri.toString()}/');
-    return root.resolve(path);
+    return _endpointForUri(activeBaseUri, path);
   }
 
   Future<bool> isAvailable({
     Duration timeout = const Duration(seconds: 3),
   }) async {
+    // 1. Try primary URL (usually local laptop IP on WiFi)
     try {
-      final response = await _client.get(_endpoint('health')).timeout(timeout);
-      if (response.statusCode != 200) return false;
-      final payload = jsonDecode(response.body);
-      return payload is Map && payload['status'] == 'healthy';
-    } catch (_) {
-      return false;
+      final response = await _client.get(_endpointForUri(baseUri, 'health')).timeout(timeout);
+      if (response.statusCode == 200) {
+        final payload = jsonDecode(response.body);
+        if (payload is Map && payload['status'] == 'healthy') {
+          _activeUri = baseUri;
+          return true;
+        }
+      }
+    } catch (_) {}
+
+    // 2. Try fallback/internet URL if available
+    final fallback = fallbackUri;
+    if (fallback != null) {
+      try {
+        final response = await _client.get(_endpointForUri(fallback, 'health')).timeout(timeout);
+        if (response.statusCode == 200) {
+          final payload = jsonDecode(response.body);
+          if (payload is Map && payload['status'] == 'healthy') {
+            _activeUri = fallback;
+            return true;
+          }
+        }
+      } catch (_) {}
     }
+
+    _activeUri = null;
+    return false;
   }
 
   Future<String> generateResponse(
@@ -86,7 +148,10 @@ class RemoteAiService {
             : 'Server returned HTTP ${response.statusCode}.',
       );
     }
-    final result = payload?['response'];
+    var result = payload?['response'];
+    if (result is Map || result is List) {
+      result = jsonEncode(result);
+    }
     if (result is! String || result.trim().isEmpty) {
       throw const RemoteAiException('Server returned an empty response.');
     }

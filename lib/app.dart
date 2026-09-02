@@ -13,12 +13,14 @@ class ConnectionStatusBar extends StatelessWidget {
     BuildContext context,
     AppController controller,
   ) async {
-    final input = TextEditingController(text: controller.serverUrl);
+    final primaryInput = TextEditingController(text: controller.serverUrl);
+    final fallbackInput = TextEditingController(text: controller.fallbackServerUrl);
     String? error;
     await showDialog<void>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
+<<<<<<< HEAD
           title: const Text('Nalam server'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -37,9 +39,63 @@ class ConnectionStatusBar extends StatelessWidget {
                 decoration: InputDecoration(
                   labelText: 'Server address',
                   errorText: error,
+=======
+          title: const Text('Nalam server configuration'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Primary Server (Local Wi-Fi):',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+>>>>>>> 68255cdb27864337510dfc537594c67fcca33991
                 ),
-              ),
-            ],
+                const SizedBox(height: 4),
+                const Text(
+                  'Enter your laptop\'s Wi-Fi IP address when both devices are on the same network.',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: primaryInput,
+                  keyboardType: TextInputType.url,
+                  autocorrect: false,
+                  decoration: const InputDecoration(
+                    labelText: 'Primary address (e.g. http://10.128.184.195:8000)',
+                    labelStyle: TextStyle(fontSize: 12),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  'Fallback Server (Internet/ngrok):',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Enter a public URL (like ngrok) to use when connected to cellular internet or when local Wi-Fi is unreachable.',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: fallbackInput,
+                  keyboardType: TextInputType.url,
+                  autocorrect: false,
+                  decoration: const InputDecoration(
+                    labelText: 'Fallback/Internet address (Optional)',
+                    labelStyle: TextStyle(fontSize: 12),
+                    hintText: 'e.g. https://yourtunnel.ngrok-free.app',
+                  ),
+                ),
+                if (error != null) ...[
+                  const SizedBox(height: 16),
+                  Text(
+                    error!,
+                    style: const TextStyle(color: Colors.red, fontSize: 12),
+                  ),
+                ],
+              ],
+            ),
           ),
           actions: [
             TextButton(
@@ -48,7 +104,10 @@ class ConnectionStatusBar extends StatelessWidget {
             ),
             FilledButton(
               onPressed: () async {
-                final valid = await controller.setRemoteServerUrl(input.text);
+                final valid = await controller.setServerUrls(
+                  primaryUrl: primaryInput.text,
+                  fallbackUrl: fallbackInput.text,
+                );
                 if (!dialogContext.mounted) return;
                 if (!valid && controller.assessmentError != null) {
                   setDialogState(() => error = controller.assessmentError);
@@ -62,7 +121,8 @@ class ConnectionStatusBar extends StatelessWidget {
         ),
       ),
     );
-    input.dispose();
+    primaryInput.dispose();
+    fallbackInput.dispose();
   }
 
   @override

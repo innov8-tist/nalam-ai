@@ -2,6 +2,7 @@ abstract final class AppConstants {
   static const String appName = 'NalamEdge';
   static const String workspaceTitle = 'Medical Triage Workspace';
 
+<<<<<<< HEAD
   /// The one configurable address for all services running on the host.
   ///
   /// Override it with:
@@ -9,6 +10,20 @@ abstract final class AppConstants {
   static const String serverUrl = String.fromEnvironment(
     'NALAM_SERVER_URL',
     defaultValue: 'http://10.0.2.2:8000',
+=======
+  /// Override for deployed builds with
+  /// `--dart-define=NALAM_API_BASE_URL=https://your-server.example`.
+  static const String remoteApiBaseUrl = String.fromEnvironment(
+    'NALAM_API_BASE_URL',
+    defaultValue: 'http://localhost:8000',
+  );
+
+  /// Optional fallback/internet-facing API URL when local connection fails or phone is on cellular/internet.
+  /// Override with `--dart-define=NALAM_API_FALLBACK_URL=https://your-fallback-server.example`.
+  static const String remoteApiFallbackUrl = String.fromEnvironment(
+    'NALAM_API_FALLBACK_URL',
+    defaultValue: '',
+>>>>>>> 68255cdb27864337510dfc537594c67fcca33991
   );
 
   static Uri get serverUri => Uri.parse(serverUrl);

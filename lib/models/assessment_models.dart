@@ -143,9 +143,9 @@ class ModelAssessment {
 
   static TriageUrgency? _parseUrgency(Object? value) =>
       switch (value?.toString().trim().toLowerCase()) {
-        'low' => TriageUrgency.low,
-        'medium' || 'moderate' => TriageUrgency.medium,
-        'high' || 'urgent' || 'urgent care' => TriageUrgency.high,
+        'low' || 'green' => TriageUrgency.low,
+        'medium' || 'moderate' || 'yellow' => TriageUrgency.medium,
+        'high' || 'urgent' || 'urgent care' || 'red' => TriageUrgency.high,
         'emergency' || 'possible emergency' => TriageUrgency.emergency,
         _ => null,
       };
