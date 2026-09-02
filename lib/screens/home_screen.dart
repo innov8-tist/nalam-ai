@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/constants.dart';
 import '../widgets/feature_button.dart';
 import '../widgets/workspace_panel.dart';
+import 'llm_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -18,6 +19,15 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {
       _workspaceMessage = '$module module selected';
     });
+  }
+
+  void _openLlmScreen() {
+    Navigator.push(
+      context,
+      MaterialPageRoute<void>(
+        builder: (context) => const LlmScreen(),
+      ),
+    );
   }
 
   @override
@@ -56,7 +66,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         FeatureButton(
                           label: 'LLM',
                           icon: Icons.psychology_rounded,
-                          onPressed: () => _selectModule('LLM'),
+                          onPressed: _openLlmScreen,
                         ),
                         FeatureButton(
                           label: 'MAP',
