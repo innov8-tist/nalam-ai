@@ -8,6 +8,9 @@ import base64
 import requests
 from typing import Optional
 import uvicorn
+import json
+import re
+from struct_llm import MedicalTriageResponse
 
 load_dotenv()
 
@@ -26,15 +29,42 @@ model = ChatGoogleGenerativeAI(
     api_key=GEMINI_KEY
 )
 
-SYSTEM_PROMPT = """You are Nalam AI, a helpful multilingual assistant. 
+SYSTEM_PROMPT = """You are Nalam AI, a medical triage assistant. 
+Analyze the patient's symptoms and provide a structured response in the following JSON format:
 
-Key instructions:
-- Detect the user's language from their message
-- If the user speaks in Malayalam, respond in Malayalam
-- If the user speaks in any other language, respond in that same language
-- Be natural, conversational, and helpful
-- When analyzing images, provide detailed and accurate descriptions
-- Maintain context across the conversation"""
+{
+  "case": {
+    "symptoms": ["symptom1", "symptom2"],
+    "duration_days": <number>
+  },
+  "risk_level": "<green|yellow|red>",
+  "immediate_action": {
+    "precautions": ["precaution1", "precaution2"],
+    "what_to_do": ["action1", "action2"],
+    "warning_signs": ["sign1", "sign2"]
+  },
+  "follow_up": {
+    "scheduled_after_hours": <number>,
+    "questions": ["question1", "question2"]
+  }
+}
+
+Guidelines:
+- Risk levels:
+  * green: Low risk, home care sufficient
+  * yellow: Moderate risk, monitor closely
+  * red: High risk, immediate medical attention needed
+
+- immediate_action:
+  * precautions: Things to avoid or be careful about RIGHT NOW
+  * what_to_do: Immediate remedies, care steps, or actions to take NOW
+  * warning_signs: Symptoms that mean "seek immediate medical help"
+
+- follow_up:
+  * scheduled_after_hours: When to check back (e.g., 24 hours = next day)
+  * questions: Specific questions to ask about their condition at follow-up time
+
+Important: Your response must include ONLY the JSON object, nothing else."""
 
 
 def convert_audio_to_text(audio_bytes: bytes) -> str:
@@ -60,6 +90,25 @@ def convert_audio_to_text(audio_bytes: bytes) -> str:
 def encode_image(image_bytes: bytes) -> str:
     """Encode image to base64"""
     return base64.b64encode(image_bytes).decode('utf-8')
+
+
+def extract_json_from_response(response_text: str) -> dict:
+    """Extract JSON from LLM response, handling markdown code blocks and extra text"""
+    try:
+        # Try to parse directly first
+        return json.loads(response_text)
+    except json.JSONDecodeError:
+        # Remove markdown code blocks if present
+        json_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', response_text, re.DOTALL)
+        if json_match:
+            return json.loads(json_match.group(1))
+        
+        # Try to find JSON object in the text
+        json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
+        if json_match:
+            return json.loads(json_match.group(0))
+        
+        raise ValueError("No valid JSON found in response")
 
 
 @app.post("/chat")
@@ -108,12 +157,26 @@ async def chat_with_ai(
         message = HumanMessage(content=message_content)
         response = model.invoke([message])
         
-        return JSONResponse(content={
-            "success": True,
-            "user_input": user_message,
-            "response": response.content,
-            "has_image": image is not None
-        })
+        # Extract and validate structured JSON
+        try:
+            json_data = extract_json_from_response(response.content)
+            validated_response = MedicalTriageResponse(**json_data)
+            
+            return JSONResponse(content={
+                "success": True,
+                "user_input": user_message,
+                "response": validated_response.model_dump(),
+                "has_image": image is not None
+            })
+        except (json.JSONDecodeError, ValueError) as e:
+            # If JSON extraction fails, return raw response
+            return JSONResponse(content={
+                "success": True,
+                "user_input": user_message,
+                "response": response.content,
+                "has_image": image is not None,
+                "warning": f"Could not parse structured response: {str(e)}"
+            })
         
     except HTTPException as he:
         raise he
@@ -130,7 +193,6 @@ async def root():
             "/health": "GET - Check API health"
         }
     }
-
 
 @app.get("/health")
 async def health_check():

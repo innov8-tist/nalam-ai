@@ -2,6 +2,22 @@ abstract final class AppConstants {
   static const String appName = 'NalamEdge';
   static const String workspaceTitle = 'Medical Triage Workspace';
 
+  // Piper TTS Models
+  static const String piperModelsDir = 'models/piper';
+  static const String piperEnglishModel = 'en_US-libritts-high';
+  static const String piperMalayalamModel = 'ml_IN-google-high';
+
+  // Piper TTS Model Download URLs (from Piper releases)
+  static const String piperEnglishModelUrl =
+      'https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/libritts/high/en_US-libritts-high.onnx';
+  static const String piperEnglishModelJsonUrl =
+      'https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/libritts/high/en_US-libritts-high.onnx.json';
+  static const String piperMalayalamModelUrl =
+      'https://huggingface.co/rhasspy/piper-voices/resolve/main/ml/ml_IN/google/high/ml_IN-google-high.onnx';
+  static const String piperMalayalamModelJsonUrl =
+      'https://huggingface.co/rhasspy/piper-voices/resolve/main/ml/ml_IN/google/high/ml_IN-google-high.onnx.json';
+
+
   // SmolVLM2 On-Device Model Defaults
   static const String smolVlmModelDir = 'models/smolvlm2';
   static const String smolVlmModelFileName =
