@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../models/llm_state.dart';
+import '../models/stt_state.dart';
+import '../services/stt_service.dart';
 import '../state/app_controller.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_components.dart';
@@ -19,11 +21,30 @@ class _AssessmentScreenState extends State<AssessmentScreen>
   int tab = 0;
   String? imagePath;
   final symptoms = TextEditingController();
+  late final STTService _sttService;
+  SttEngineState _sttState = const SttEngineState(
+    status: SttEngineStatus.uninitialized,
+  );
+
   @override
   bool get wantKeepAlive => true;
+
+  @override
+  void initState() {
+    super.initState();
+    _sttService = STTService();
+    _sttService.stateStream.listen((state) {
+      if (mounted) {
+        setState(() => _sttState = state);
+      }
+    });
+    _sttService.initialize();
+  }
+
   @override
   void dispose() {
     symptoms.dispose();
+    _sttService.dispose();
     super.dispose();
   }
 
@@ -40,6 +61,24 @@ class _AssessmentScreenState extends State<AssessmentScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(app.assessmentError ?? 'Assessment failed.')),
       );
+    }
+  }
+
+  Future<void> _handleRecording() async {
+    try {
+      final transcription = await _sttService.toggleRecording();
+      if (transcription != null && transcription.isNotEmpty) {
+        setState(() {
+          symptoms.text = transcription;
+          tab = 1; // Switch to text tab to show result
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Recording error: $e')),
+        );
+      }
     }
   }
 
@@ -95,7 +134,11 @@ class _AssessmentScreenState extends State<AssessmentScreen>
               ),
               const SizedBox(height: 18),
               if (tab == 0)
-                _VoicePanel(onUseText: () => setState(() => tab = 1))
+                _VoicePanel(
+                  sttState: _sttState,
+                  onRecord: _handleRecording,
+                  onUseText: () => setState(() => tab = 1),
+                )
               else ...[
                 if (tab == 2) ...[
                   ImageInputPreview(
@@ -157,41 +200,95 @@ class _AssessmentScreenState extends State<AssessmentScreen>
 }
 
 class _VoicePanel extends StatelessWidget {
-  const _VoicePanel({required this.onUseText});
+  const _VoicePanel({
+    required this.sttState,
+    required this.onRecord,
+    required this.onUseText,
+  });
+  final SttEngineState sttState;
+  final VoidCallback onRecord;
   final VoidCallback onUseText;
+
   @override
-  Widget build(BuildContext context) => SectionCard(
-    child: Column(
-      children: [
-        Container(
-          width: 112,
-          height: 112,
-          decoration: const BoxDecoration(
-            color: AppColors.mint,
-            shape: BoxShape.circle,
+  Widget build(BuildContext context) {
+    final isRecording = sttState.status == SttEngineStatus.recording;
+    final isTranscribing = sttState.status == SttEngineStatus.transcribing;
+    final isReady = sttState.status == SttEngineStatus.ready;
+    final hasError = sttState.status == SttEngineStatus.error;
+
+    return SectionCard(
+      child: Column(
+        children: [
+          InkWell(
+            onTap: isReady || isRecording ? onRecord : null,
+            borderRadius: BorderRadius.circular(100),
+            child: Container(
+              width: 112,
+              height: 112,
+              decoration: BoxDecoration(
+                color: isRecording
+                    ? AppColors.urgent.withOpacity(0.2)
+                    : AppColors.mint,
+                shape: BoxShape.circle,
+              ),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  if (isRecording)
+                    Container(
+                      width: 96,
+                      height: 96,
+                      decoration: BoxDecoration(
+                        color: AppColors.urgent.withOpacity(0.3),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  Icon(
+                    isRecording ? Icons.stop : Icons.mic,
+                    size: 56,
+                    color: isRecording ? AppColors.urgent : AppColors.primary,
+                  ),
+                ],
+              ),
+            ),
           ),
-          child: const Icon(Icons.mic, size: 56, color: AppColors.primary),
-        ),
-        const SizedBox(height: 18),
-        const Text(
-          'Voice input is not connected yet',
-          style: TextStyle(fontWeight: FontWeight.w700),
-        ),
-        const SizedBox(height: 6),
-        const Text(
-          'The existing speech-to-text service is a placeholder. Use text input for this build.',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: AppColors.muted),
-        ),
-        const SizedBox(height: 14),
-        OutlinedButton.icon(
-          onPressed: onUseText,
-          icon: const Icon(Icons.keyboard),
-          label: const Text('Use Text Instead'),
-        ),
-      ],
-    ),
-  );
+          const SizedBox(height: 18),
+          Text(
+            isRecording
+                ? 'Recording... Tap to stop'
+                : isTranscribing
+                    ? 'Transcribing...'
+                    : isReady
+                        ? 'Tap to record your symptoms'
+                        : hasError
+                            ? 'Speech-to-text error'
+                            : 'Initializing...',
+            style: const TextStyle(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            sttState.message ?? 'Loading speech recognition...',
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: AppColors.muted, fontSize: 13),
+          ),
+          if (hasError) ...[
+            const SizedBox(height: 14),
+            Text(
+              sttState.error ?? '',
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: AppColors.urgent, fontSize: 12),
+            ),
+          ],
+          const SizedBox(height: 14),
+          OutlinedButton.icon(
+            onPressed: onUseText,
+            icon: const Icon(Icons.keyboard),
+            label: const Text('Use Text Instead'),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _ModelStatus extends StatelessWidget {

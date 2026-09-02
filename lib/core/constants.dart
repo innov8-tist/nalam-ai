@@ -35,19 +35,19 @@ abstract final class AppConstants {
   // SmolVLM2 On-Device Model Defaults
   static const String smolVlmModelDir = 'models/smolvlm2';
   static const String smolVlmModelFileName =
-      'SmolVLM2-500M-Video-Instruct-Q8_0.gguf';
+      'SmolVLM-256M-Instruct-f16.gguf';
   static const String smolVlmMmprojFileName =
-      'mmproj-SmolVLM2-500M-Video-Instruct-Q8_0.gguf';
+      'mmproj-SmolVLM-256M-Instruct-f16.gguf';
 
-  // Direct HuggingFace Model Weights Repositories (SmolVLM2)
+  // Direct HuggingFace Model Weights Repositories (SmolVLM)
   static const String smolVlmModelDownloadUrl =
-      'https://huggingface.co/ggml-org/SmolVLM2-500M-Video-Instruct-GGUF/resolve/main/SmolVLM2-500M-Video-Instruct-Q8_0.gguf';
+      'https://huggingface.co/ggml-org/SmolVLM-256M-Instruct-GGUF/resolve/main/SmolVLM-256M-Instruct-f16.gguf';
   static const String smolVlmModelMirrorDownloadUrl =
-      'https://hf-mirror.com/ggml-org/SmolVLM2-500M-Video-Instruct-GGUF/resolve/main/SmolVLM2-500M-Video-Instruct-Q8_0.gguf';
+      'https://hf-mirror.com/ggml-org/SmolVLM-256M-Instruct-GGUF/resolve/main/SmolVLM-256M-Instruct-f16.gguf';
   static const String smolVlmMmprojDownloadUrl =
-      'https://huggingface.co/ggml-org/SmolVLM2-500M-Video-Instruct-GGUF/resolve/main/mmproj-SmolVLM2-500M-Video-Instruct-Q8_0.gguf';
+      'https://huggingface.co/ggml-org/SmolVLM-256M-Instruct-GGUF/resolve/main/mmproj-SmolVLM-256M-Instruct-f16.gguf';
   static const String smolVlmMmprojMirrorDownloadUrl =
-      'https://hf-mirror.com/ggml-org/SmolVLM2-500M-Video-Instruct-GGUF/resolve/main/mmproj-SmolVLM2-500M-Video-Instruct-Q8_0.gguf';
+      'https://hf-mirror.com/ggml-org/SmolVLM-256M-Instruct-GGUF/resolve/main/mmproj-SmolVLM-256M-Instruct-f16.gguf';
 
   // SmolVLM2 Model Server / API Endpoint
   static const String smolVlmDefaultApiUrl =
