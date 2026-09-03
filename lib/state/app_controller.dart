@@ -64,16 +64,28 @@ class AppController extends ChangeNotifier {
 
   Future<bool> refreshConnectivity() async {
     if (_isDisposed) return false;
+    if (isAnalyzing) return isOnline;
     if (isCheckingConnection) return isOnline;
     isCheckingConnection = true;
     notifyListeners();
     final available = await remoteAiService.isAvailable();
     if (_isDisposed) return false;
-    final changed = available != isOnline;
-    isOnline = available;
+
+    // Guard: during active analysis, we can only switch from online to offline, never offline to online
+    bool newOnline = available;
+    if (isAnalyzing) {
+      if (isOnline && !available) {
+        newOnline = false;
+      } else if (!isOnline && available) {
+        newOnline = false;
+      }
+    }
+
+    final changed = newOnline != isOnline;
+    isOnline = newOnline;
     isCheckingConnection = false;
     if (changed || hasListeners) notifyListeners();
-    return available;
+    return newOnline;
   }
 
   void start() {
@@ -166,7 +178,8 @@ class AppController extends ChangeNotifier {
     assessmentError = null;
     notifyListeners();
     
-    if (!isOnline) await refreshConnectivity();
+    // Always refresh connectivity before running to ensure server is reachable
+    await refreshConnectivity();
     if (!isOnline && !modelState.isReady) {
       isAnalyzing = false;
       return _reportNoInferenceAvailable();
@@ -207,12 +220,16 @@ class AppController extends ChangeNotifier {
       // Store the final output
       session.modelOutputs.add(output);
       
-      // Final model assessment already set during streaming
-      session.modelResult = ModelAssessment(
-        rawOutput: output,
-        summary: output.trim(),
-        isStructured: false,
-      );
+      // Final model assessment (structured online, unstructured offline)
+      if (lastAssessmentUsedServer) {
+        session.modelResult = ModelAssessment.fromRawOutput(output);
+      } else {
+        session.modelResult = ModelAssessment(
+          rawOutput: output,
+          summary: output.trim(),
+          isStructured: false,
+        );
+      }
       
       session.triageResult = _triageService.assess(
         modelAssessment: session.modelResult!,
@@ -282,7 +299,7 @@ class AppController extends ChangeNotifier {
       );
     }
     
-    // Stream from local model
+    // Stream from local model (plain text streaming as per commit 6d27854fdbd6a6ac686e4d5dce7c9363ff672624)
     await for (final token in llmService.generateStreaming(
       prompt: prompt,
       imagePath: imagePath,
@@ -318,6 +335,7 @@ class AppController extends ChangeNotifier {
         'The server became unavailable and the local model is not ready.',
       );
     }
+
     return llmService.generateResponse(
       prompt,
       imagePath: imagePath,

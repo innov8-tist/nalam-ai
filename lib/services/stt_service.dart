@@ -6,6 +6,7 @@ import 'package:record/record.dart';
 import 'package:whisper_flutter_new/whisper_flutter_new.dart';
 
 import '../models/stt_state.dart';
+import 'remote_ai_service.dart';
 
 /// Records voice and transcribes using local Whisper model
 class STTService {
@@ -109,15 +110,21 @@ class STTService {
     }
   }
 
-  Future<String> stopAndTranscribe({String languageCode = 'unknown'}) async {
+  Future<String> stopAndTranscribe({
+    String languageCode = 'unknown',
+    RemoteAiService? remoteAiService,
+    bool isOnline = false,
+  }) async {
     if (!_currentState.isRecording) {
       throw const SttException('No recording is in progress.');
     }
 
     _updateState(
-      const SttEngineState(
+      SttEngineState(
         status: SttEngineStatus.transcribing,
-        message: 'Transcribing with local Whisper model…',
+        message: isOnline && remoteAiService != null
+            ? 'Transcribing with remote Sarvam STT…'
+            : 'Transcribing with local Whisper model…',
       ),
     );
 
@@ -135,11 +142,37 @@ class STTService {
         );
       }
 
+      if (isOnline && remoteAiService != null) {
+        try {
+          print('🎤 [STT] Transcribing audio file remotely: $path');
+          final transcript = await remoteAiService.transcribeAudio(
+            path,
+            languageCode: languageCode,
+          );
+          print('🎤 [STT] Remote transcription result: $transcript');
+          _updateState(
+            const SttEngineState(
+              status: SttEngineStatus.ready,
+              message: 'Transcription complete. Tap to record again.',
+            ),
+          );
+          return transcript;
+        } catch (error) {
+          print('❌ [STT] Remote transcription failed, falling back to local Whisper: $error');
+          _updateState(
+            const SttEngineState(
+              status: SttEngineStatus.transcribing,
+              message: 'Remote transcription failed. Falling back to local Whisper…',
+            ),
+          );
+        }
+      }
+
       if (_whisper == null) {
         throw const SttException('Whisper model not initialized');
       }
 
-      print('🎤 [STT] Transcribing audio file: $path');
+      print('🎤 [STT] Transcribing audio file locally: $path');
       
       // Create transcribe request
       final request = TranscribeRequest(
@@ -154,7 +187,7 @@ class STTService {
       final response = await _whisper!.transcribe(transcribeRequest: request);
       final transcript = response.text.trim();
       
-      print('🎤 [STT] Transcription result: $transcript');
+      print('🎤 [STT] Local transcription result: $transcript');
       
       if (transcript.isEmpty) {
         throw const SttException(
@@ -187,9 +220,17 @@ class STTService {
     }
   }
 
-  Future<String?> toggleRecording({String languageCode = 'unknown'}) async {
+  Future<String?> toggleRecording({
+    String languageCode = 'unknown',
+    RemoteAiService? remoteAiService,
+    bool isOnline = false,
+  }) async {
     if (_currentState.isRecording) {
-      return stopAndTranscribe(languageCode: languageCode);
+      return stopAndTranscribe(
+        languageCode: languageCode,
+        remoteAiService: remoteAiService,
+        isOnline: isOnline,
+      );
     }
     await startRecording();
     return null;

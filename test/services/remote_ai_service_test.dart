@@ -13,11 +13,7 @@ void main() {
       client: MockClient((_) async => http.Response('', 500)),
     );
 
-    expect(service.baseUri, AppConstants.serverUri);
-    expect(
-      AppConstants.smolVlmApiUrl,
-      'http://10.0.2.2:8080/v1/chat/completions',
-    );
+    expect(service.baseUri, Uri.parse(AppConstants.remoteApiBaseUrl));
     service.dispose();
   });
 
@@ -87,6 +83,7 @@ void main() {
         return http.Response(
           jsonEncode({'success': true, 'transcript': 'എനിക്ക് പനി ഉണ്ട്'}),
           200,
+          headers: {'content-type': 'application/json; charset=utf-8'},
         );
       }),
     );

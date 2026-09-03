@@ -130,9 +130,8 @@ void main() {
     );
 
     expect(prompt, contains('visible or explicitly reported'));
-    expect(prompt, contains('urgency_reasons'));
-    expect(prompt, contains('possible_causes'));
-    expect(prompt, contains('seek_help_now_if'));
+    expect(prompt, contains('JSON schema'));
+    expect(prompt, contains('Rules:'));
   });
 
   test('rejects a vague urgent reason as an incomplete assessment', () {

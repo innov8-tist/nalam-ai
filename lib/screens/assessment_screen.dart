@@ -87,7 +87,7 @@ class _AssessmentScreenState extends State<AssessmentScreen>
     try {
       if (service.currentState.isRecording) {
         print('🎤 [VOICE] Stopping recording and transcribing...');
-        await _finishVoiceInput(service, app.languageCode);
+        await _finishVoiceInput(service, app);
       } else {
         print('🎤 [VOICE] Starting recording...');
         await service.startRecording();
@@ -108,11 +108,14 @@ class _AssessmentScreenState extends State<AssessmentScreen>
     }
   }
 
-  Future<void> _finishVoiceInput(STTService service, String language) async {
+  Future<void> _finishVoiceInput(STTService service, AppController app) async {
     _recordingTimer?.cancel();
-    final languageCode = language == 'ml' ? 'ml-IN' : 'en-IN';
+    final languageCode = app.languageCode == 'ml' ? 'ml-IN' : 'en-IN';
+    final isOnlineNow = await app.refreshConnectivity();
     final transcript = await service.stopAndTranscribe(
       languageCode: languageCode,
+      remoteAiService: app.remoteAiService,
+      isOnline: isOnlineNow,
     );
     if (!mounted) return;
     setState(() {
@@ -308,7 +311,9 @@ class _ModelStatus extends StatelessWidget {
                 ),
                 Text(
                   isOnline
-                      ? 'Local model remains available as a fallback'
+                      ? (localReady
+                          ? 'Local model is ready as fallback'
+                          : (state.message ?? 'Local model not downloaded/loaded'))
                       : (state.message ??
                             (localReady ? 'Model ready' : 'Model not loaded')),
                   style: const TextStyle(fontSize: 12, color: AppColors.muted),
@@ -316,7 +321,7 @@ class _ModelStatus extends StatelessWidget {
               ],
             ),
           ),
-          if (!isOnline && !localReady && !busy)
+          if (!localReady && !busy)
             TextButton(
               onPressed: onInitialize,
               child: Text(state.hasError ? 'Download / Retry' : 'Load'),

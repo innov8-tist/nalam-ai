@@ -43,20 +43,93 @@ class ModelAssessment {
           ? Map<String, dynamic>.from(nested)
           : decoded;
 
-      print('📦 [PARSE] Using values from: ${nested is Map ? "nested 'assessment'" : "root"}');
+      print('📦 [PARSE] Using values from: ${nested is Map ? "nested \'assessment\'" : "root"}');
+
+      String summaryVal = _stringValue(
+        _first(values, const [
+          'summary',
+          'assessment_summary',
+          'explanation',
+        ]),
+      );
+
+      if (summaryVal.isEmpty) {
+        final buf = StringBuffer();
+        
+        final risk = _stringValue(values['risk_level']);
+        if (risk.isNotEmpty) {
+          buf.writeln('### Risk Level: ${risk.toUpperCase()}');
+          buf.writeln();
+        }
+        
+        final caseMap = values['case'];
+        if (caseMap is Map) {
+          final symptomsList = _stringList(caseMap['symptoms']);
+          if (symptomsList.isNotEmpty) {
+            buf.writeln('**Symptoms:** ${symptomsList.join(', ')}');
+          }
+          final duration = caseMap['duration_days'];
+          if (duration != null) {
+            buf.writeln('**Duration:** $duration days');
+          }
+          buf.writeln();
+        }
+        
+        final actionMap = values['immediate_action'];
+        if (actionMap is Map) {
+          final precautionsList = _stringList(actionMap['precautions']);
+          if (precautionsList.isNotEmpty) {
+            buf.writeln('**Immediate Precautions:**');
+            for (final p in precautionsList) {
+              buf.writeln('• $p');
+            }
+            buf.writeln();
+          }
+          
+          final whatToDoList = _stringList(actionMap['what_to_do']);
+          if (whatToDoList.isNotEmpty) {
+            buf.writeln('**What To Do:**');
+            for (final w in whatToDoList) {
+              buf.writeln('• $w');
+            }
+            buf.writeln();
+          }
+          
+          final warningList = _stringList(actionMap['warning_signs']);
+          if (warningList.isNotEmpty) {
+            buf.writeln('**Warning Signs:**');
+            for (final s in warningList) {
+              buf.writeln('• $s');
+            }
+            buf.writeln();
+          }
+        }
+        
+        final followUpMap = values['follow_up'];
+        if (followUpMap is Map) {
+          final questionsList = _stringList(followUpMap['questions']);
+          if (questionsList.isNotEmpty) {
+            buf.writeln('**Follow-up Questions:**');
+            for (final q in questionsList) {
+              buf.writeln('• $q');
+            }
+            buf.writeln();
+          }
+        }
+        
+        summaryVal = buf.toString().trim();
+      }
+
+      if (summaryVal.isEmpty) {
+        summaryVal = rawOutput;
+      }
 
       return ModelAssessment(
         rawOutput: rawOutput,
         suggestedUrgency: _parseUrgency(
           _first(values, const ['urgency', 'risk', 'risk_level', 'care_level']),
         ),
-        summary: _stringValue(
-          _first(values, const [
-            'summary',
-            'assessment_summary',
-            'explanation',
-          ]),
-        ),
+        summary: summaryVal,
         urgencyReasons: _stringList(
           _first(values, const [
             'urgency_reasons',

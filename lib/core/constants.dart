@@ -3,10 +3,13 @@ abstract final class AppConstants {
   static const String workspaceTitle = 'Medical Triage Workspace';
 
   /// Override for deployed builds with
-  /// `--dart-define=NALAM_API_BASE_URL=https://your-server.example`.
+  /// `--dart-define=NALAM_SERVER_URL=https://your-server.example`.
   static const String remoteApiBaseUrl = String.fromEnvironment(
-    'NALAM_API_BASE_URL',
-    defaultValue: 'http://localhost:8000',
+    'NALAM_SERVER_URL',
+    defaultValue: String.fromEnvironment(
+      'NALAM_API_BASE_URL',
+      defaultValue: 'http://10.128.184.195:8000',
+    ),
   );
 
   /// Optional fallback/internet-facing API URL when local connection fails or phone is on cellular/internet.

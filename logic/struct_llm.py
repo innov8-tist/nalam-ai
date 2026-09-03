@@ -1,11 +1,11 @@
 from pydantic import BaseModel, Field
-from typing import List, Literal
+from typing import List, Literal, Optional
 
 
 class CaseInfo(BaseModel):
     """Patient case information"""
     symptoms: List[str] = Field(description="List of symptoms reported by the patient")
-    duration_days: int = Field(description="Number of days the symptoms have persisted")
+    duration_days: Optional[int] = Field(default=None, description="Number of days the symptoms have persisted")
 
 
 class ImmediateAction(BaseModel):

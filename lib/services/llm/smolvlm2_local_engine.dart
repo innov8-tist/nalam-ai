@@ -12,8 +12,6 @@ class SmolVlm2LocalEngine implements BaseLlmEngine {
 
   final StreamController<LlmEngineState> _stateController =
       StreamController<LlmEngineState>.broadcast();
-  final StreamController<String> _tokenController =
-      StreamController<String>.broadcast();
 
   LlmEngineState _currentState = const LlmEngineState(
     status: LlmEngineStatus.uninitialized,
@@ -125,15 +123,23 @@ class SmolVlm2LocalEngine implements BaseLlmEngine {
       ),
     );
 
-    _executeInference(prompt: prompt, imagePath: imagePath, config: config);
+    final tokenController = StreamController<String>();
 
-    return _tokenController.stream;
+    _executeInference(
+      prompt: prompt,
+      imagePath: imagePath,
+      config: config,
+      tokenController: tokenController,
+    );
+
+    return tokenController.stream;
   }
 
   Future<void> _executeInference({
     required String prompt,
     String? imagePath,
     required SmolVlmConfig config,
+    required StreamController<String> tokenController,
   }) async {
     try {
       final effectivePrompt = prompt.isEmpty
@@ -167,8 +173,8 @@ class SmolVlm2LocalEngine implements BaseLlmEngine {
         final token = chunk.choices.first.delta.content;
         if (token != null && token.isNotEmpty) {
           _currentGenerationBuffer.write(token);
-          if (!_tokenController.isClosed) {
-            _tokenController.add(token);
+          if (!tokenController.isClosed) {
+            tokenController.add(token);
           }
         }
       }
@@ -196,12 +202,16 @@ class SmolVlm2LocalEngine implements BaseLlmEngine {
         ),
       );
 
-      if (!_tokenController.isClosed) {
-        _tokenController.addError(errorMessage);
+      if (!tokenController.isClosed) {
+        tokenController.addError(errorMessage);
       }
 
       if (_generationCompleter != null && !_generationCompleter!.isCompleted) {
         _generationCompleter!.completeError(errorMessage);
+      }
+    } finally {
+      if (!tokenController.isClosed) {
+        await tokenController.close();
       }
     }
   }
@@ -245,6 +255,5 @@ class SmolVlm2LocalEngine implements BaseLlmEngine {
     _engine = null;
 
     if (!_stateController.isClosed) await _stateController.close();
-    if (!_tokenController.isClosed) await _tokenController.close();
   }
 }
