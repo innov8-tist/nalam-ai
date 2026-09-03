@@ -51,3 +51,6 @@ app.*.map.json
 .venv
 env.json
 logic/.env
+
+# Local dart-defines can contain service credentials.
+config.json

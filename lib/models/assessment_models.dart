@@ -17,8 +17,10 @@ class ModelAssessment {
   factory ModelAssessment.fromRawOutput(String rawOutput) {
     print('🔍 [PARSE] Starting to parse raw output...');
     print('📏 Raw output length: ${rawOutput.length}');
-    print('📝 First 200 chars: ${rawOutput.substring(0, rawOutput.length > 200 ? 200 : rawOutput.length)}');
-    
+    print(
+      '📝 First 200 chars: ${rawOutput.substring(0, rawOutput.length > 200 ? 200 : rawOutput.length)}',
+    );
+
     try {
       final jsonObject = _extractJsonObject(rawOutput);
       if (jsonObject == null) {
@@ -43,7 +45,9 @@ class ModelAssessment {
           ? Map<String, dynamic>.from(nested)
           : decoded;
 
-      print('📦 [PARSE] Using values from: ${nested is Map ? "nested 'assessment'" : "root"}');
+      print(
+        '📦 [PARSE] Using values from: ${nested is Map ? "nested 'assessment'" : "root"}',
+      );
 
       return ModelAssessment(
         rawOutput: rawOutput,
@@ -254,6 +258,8 @@ class Facility {
     required this.etaMinutes,
     required this.capabilities,
     required this.acceptingPatients,
+    required this.latitude,
+    required this.longitude,
     this.icuAvailable = 0,
     this.icuTotal = 0,
     this.bedsAvailable = 0,
@@ -267,6 +273,8 @@ class Facility {
   final int etaMinutes;
   final Set<String> capabilities;
   final bool acceptingPatients;
+  final double latitude;
+  final double longitude;
   final int icuAvailable;
   final int icuTotal;
   final int bedsAvailable;

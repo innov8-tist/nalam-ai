@@ -190,17 +190,8 @@ async def chat_with_ai(
         
         if audio and audio.filename:
             audio_bytes = await audio.read()
-<<<<<<< HEAD
-            user_message = await run_in_threadpool(
-                convert_audio_to_text,
-                audio_bytes,
-                audio.filename or "audio.wav",
-                audio.content_type or "audio/wav",
-            )
-=======
             if len(audio_bytes) > 0:
                 user_message = convert_audio_to_text(audio_bytes)
->>>>>>> 68255cdb27864337510dfc537594c67fcca33991
         
         if not user_message:
             raise HTTPException(status_code=400, detail="Either text_prompt or audio must be provided")
