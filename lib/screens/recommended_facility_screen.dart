@@ -14,7 +14,8 @@ class RecommendedFacilityScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final recommended =
-        AppScope.of(context).session.recommendedFacility ?? demoFacilities.last;
+        AppScope.of(context).session.recommendedFacility ??
+        demoFacilities.firstWhere((facility) => facility.isRecommended);
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: !embedded,

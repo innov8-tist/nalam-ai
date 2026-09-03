@@ -39,6 +39,11 @@ dependencies:
   record: ^7.1.1
   flutter_tts: ^4.2.5
   dio: ^5.4.0
+  # Local compatibility wrapper for AGP 9 + Flutter's legacy Kotlin mode.
+  # Keep this aligned with upstream Magic Lane 3.1.11.
+  magiclane_maps_flutter:
+    path: third_party/magiclane_maps_flutter
+  geolocator: ^13.0.4
 
 dependency_overrides:
   path_provider_android: 2.2.17

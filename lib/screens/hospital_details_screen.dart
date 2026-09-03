@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/assessment_models.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_components.dart';
+import 'route_screen.dart';
 
 class HospitalDetailsScreen extends StatelessWidget {
   const HospitalDetailsScreen({required this.facility, super.key});
@@ -85,6 +86,17 @@ class HospitalDetailsScreen extends StatelessWidget {
                 .toList(),
           ),
           const SizedBox(height: 20),
+          PrimaryButton(
+            label: 'View on Map',
+            icon: Icons.map_outlined,
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => RouteScreen(facility: facility),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
           PrimaryButton(
             label: 'Call Hospital',
             icon: Icons.phone,

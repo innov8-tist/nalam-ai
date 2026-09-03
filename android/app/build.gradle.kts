@@ -27,6 +27,13 @@ android {
         // flag during build.
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        // The current physical deployment targets are 64-bit ARM phones.
+        // Native AI and map libraries are large; excluding emulator/legacy
+        // ABIs avoids a ~126 MB USB install overhead for every debug run.
+        ndk {
+            abiFilters += "arm64-v8a"
+        }
     }
 
     buildTypes {

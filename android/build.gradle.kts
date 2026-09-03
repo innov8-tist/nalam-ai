@@ -2,6 +2,9 @@ allprojects {
     repositories {
         google()
         mavenCentral()
+        maven {
+            url = uri("https://developer.magiclane.com/packages/android")
+        }
     }
 }
 

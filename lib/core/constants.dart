@@ -19,6 +19,13 @@ abstract final class AppConstants {
     defaultValue: '',
   );
 
+  /// Magic Lane authorisation used by the offline map and routing SDK.
+  /// Keep this in an ignored dart-define file; never hardcode it in Dart.
+  static const String magicLaneApiToken = String.fromEnvironment(
+    'MAGICLANE_API_TOKEN',
+    defaultValue: '',
+  );
+
   // Piper TTS Models
   static const String piperModelsDir = 'models/piper';
   static const String piperEnglishModel = 'en_US-libritts-high';
